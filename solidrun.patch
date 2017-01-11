@@ -1,0 +1,2235 @@
+diff --git a/src/mainboard/solidrun/Kconfig b/src/mainboard/solidrun/Kconfig
+new file mode 100644
+index 0000000000..00532f7ebe
+--- /dev/null
++++ b/src/mainboard/solidrun/Kconfig
+@@ -0,0 +1,16 @@
++if VENDOR_SOLIDRUN
++
++choice
++    prompt "Mainboard model"
++
++source "src/mainboard/solidrun/*/Kconfig.name"
++
++endchoice
++
++source "src/mainboard/solidrun/*/Kconfig"
++
++config MAINBOARD_VENDOR
++    string "Mainboard Vendor"
++    default "SolidRun"
++
++endif # VENDOR_SOLIDRUN
+diff --git a/src/mainboard/solidrun/Kconfig.name b/src/mainboard/solidrun/Kconfig.name
+new file mode 100644
+index 0000000000..dc694859dd
+--- /dev/null
++++ b/src/mainboard/solidrun/Kconfig.name
+@@ -0,0 +1,2 @@
++config VENDOR_SOLIDRUN
++    bool "SolidRun"
+diff --git a/src/mainboard/solidrun/braswell_som/Kconfig b/src/mainboard/solidrun/braswell_som/Kconfig
+new file mode 100644
+index 0000000000..b21e358f75
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/Kconfig
+@@ -0,0 +1,43 @@
++if BOARD_SOLIDRUN_BRASWELLSOM
++
++config BOARD_SPECIFIC_OPTIONS
++	def_bool y
++	select BOARD_ROMSIZE_KB_8192
++	select ENABLE_BUILTIN_COM1
++	select HAVE_ACPI_RESUME
++	select HAVE_ACPI_TABLES
++	select HAVE_OPTION_TABLE
++	select SOC_INTEL_BRASWELL
++	select PCIEXP_L1_SUB_STATE
++
++config MAINBOARD_DIR
++	string
++	default solidrun/braswell_som
++
++config MAINBOARD_PART_NUMBER
++	string
++	default "Braswell SOM"
++
++config MAINBOARD_VENDOR
++	string
++	default "SolidRun"
++
++if !GOP_SUPPORT
++config VGA_BIOS_FILE
++	string
++	default "3rdparty/blobs/mainboard/intel/strago/vgabios.bin"
++	help
++	  The C0 version of the video bios gets computed from this name
++	  so that they can both be added.  Only the correct one for the
++	  system will be run.
++
++config VGA_BIOS_ID
++	string
++	default "8086,22b0"
++	help
++	  The VGA_BIOS_ID for the C0 version of the video bios is hardcoded
++	  in soc/intel/braswell/Makefile.inc as 8086,22b1
++
++endif #GOP_SUPPORT
++
++endif # BOARD_SOLIDRUN_BRASWELLSOM
+diff --git a/src/mainboard/solidrun/braswell_som/Kconfig.name b/src/mainboard/solidrun/braswell_som/Kconfig.name
+new file mode 100644
+index 0000000000..fde4eef22d
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/Kconfig.name
+@@ -0,0 +1,2 @@
++config BOARD_SOLIDRUN_BRASWELLSOM
++	bool "Braswell SOM"
+diff --git a/src/mainboard/solidrun/braswell_som/Makefile.inc b/src/mainboard/solidrun/braswell_som/Makefile.inc
+new file mode 100644
+index 0000000000..244316b739
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/Makefile.inc
+@@ -0,0 +1,28 @@
++##
++## This file is part of the coreboot project.
++##
++## Copyright (C) 2013 Google Inc.
++## Copyright (C) 2015 Intel Corp.
++## Copyright (C) 2016 Andreas Galauner <andreas@galauner.de>
++##
++## This program is free software; you can redistribute it and/or modify
++## it under the terms of the GNU General Public License as published by
++## the Free Software Foundation; version 2 of the License.
++##
++## This program is distributed in the hope that it will be useful,
++## but WITHOUT ANY WARRANTY; without even the implied warranty of
++## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++## GNU General Public License for more details.
++##
++
++subdirs-y += spd
++
++romstage-$(CONFIG_ENABLE_BUILTIN_COM1) += com_init.c
++
++ramstage-y += boardid.c
++ramstage-y += gpio.c
++ramstage-y += irqroute.c
++ramstage-y += ramstage.c
++ramstage-y += w25q64.c
++
++smm-$(CONFIG_HAVE_SMI_HANDLER) += smihandler.c
+diff --git a/src/mainboard/solidrun/braswell_som/acpi/ec.asl b/src/mainboard/solidrun/braswell_som/acpi/ec.asl
+new file mode 100644
+index 0000000000..e69de29bb2
+diff --git a/src/mainboard/solidrun/braswell_som/acpi/mainboard.asl b/src/mainboard/solidrun/braswell_som/acpi/mainboard.asl
+new file mode 100644
+index 0000000000..635ff5abe0
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/acpi/mainboard.asl
+@@ -0,0 +1,96 @@
++/*
++ * This file is part of the coreboot project.
++ *
++ * Copyright (C) 2012 Google Inc.
++ * Copyright (C) 2015 Intel Corp.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; version 2 of
++ * the License.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ */
++
++#include "onboard.h"
++
++Scope (\_SB)
++{
++	Device (PWRB)
++	{
++		Name (_HID, EisaId ("PNP0C0C"))
++		Name (_UID, 1)
++	}
++}
++
++Scope (\_SB.PCI0.LPCB)
++{
++	//#include <drivers/pc80/tpm/acpi/tpm.asl>
++}
++
++//Scope (\_SB.I2C5)
++//{
++//	/* Realtek Audio Codec */
++//	Device (RTEK)   /* Audio Codec driver I2C */
++//	{
++//		Name (_ADR, 0)
++//		Name (_HID, AUDIO_CODEC_HID)
++//		Name (_CID, AUDIO_CODEC_CID)
++//		Name (_DDN, AUDIO_CODEC_DDN)
++//		Name (_UID, 1)
++//
++//		Method(_CRS, 0x0, NotSerialized)
++//		{
++//			Name(SBUF,ResourceTemplate ()
++//			{
++//				I2CSerialBus(
++//					AUDIO_CODEC_I2C_ADDR,	/* SlaveAddress: bus address */
++//					ControllerInitiated,	/* SlaveMode: default to ControllerInitiated */
++//					400000,			/* ConnectionSpeed: in Hz */
++//					AddressingMode7Bit,	/* Addressing Mode: default to 7 bit */
++//					"\\_SB.I2C5",		/* ResourceSource: I2C bus controller name */
++//				)
++//
++//			 /* Jack Detect (index 0) */
++//			 GpioInt (Edge, ActiveLow, ExclusiveAndWake, PullNone,,
++//				  "\\_SB.GPSW") { JACK_DETECT_GPIO_INDEX }
++//			} )
++//			Return (SBUF)
++//		}
++//
++//		Method (_STA)
++//		{
++//			Return (0xF)
++//		}
++//	}
++//}
++
++Scope (\_SB.LPEA)
++{
++	Name (GBUF, ResourceTemplate ()
++	{
++		/* Jack Detect (index 0) */
++		//GpioInt (Edge, ActiveLow, ExclusiveAndWake, PullNone,,
++		//	 "\\_SB.GPSW") { JACK_DETECT_GPIO_INDEX }
++	})
++}
++
++Scope (\_SB.GPNC)
++{
++	Method (_AEI, 0, NotSerialized)  // _AEI: ACPI Event Interrupts
++	{
++		Name (RBUF, ResourceTemplate ()
++		{
++			//GpioInt (Edge, ActiveLow, ExclusiveAndWake, PullNone,,
++			//	"\\_SB.GPNC") { BOARD_SCI_GPIO_INDEX }
++		})
++		Return (RBUF)
++	}
++
++	Method (_E0F, 0, NotSerialized)  // _Exx: Edge-Triggered GPE
++	{
++	}
++}
+diff --git a/src/mainboard/solidrun/braswell_som/acpi/superio.asl b/src/mainboard/solidrun/braswell_som/acpi/superio.asl
+new file mode 100644
+index 0000000000..1aeee9a519
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/acpi/superio.asl
+@@ -0,0 +1 @@
++#include "onboard.h"
+\ No newline at end of file
+diff --git a/src/mainboard/solidrun/braswell_som/acpi_tables.c b/src/mainboard/solidrun/braswell_som/acpi_tables.c
+new file mode 100644
+index 0000000000..50fe303c3b
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/acpi_tables.c
+@@ -0,0 +1,70 @@
++/*
++ * This file is part of the coreboot project.
++ *
++ * Copyright (C) 2012 Google Inc.
++ * Copyright (C) 2015 Intel Corp.
++ * Copyright (C) 2017 Andreas Galauner <andreas@galauner.de>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; version 2 of the License.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ */
++
++#include <arch/acpi.h>
++#include <arch/acpigen.h>
++#include <arch/ioapic.h>
++#include <arch/smp/mpspec.h>
++#include <cbmem.h>
++#include <console/console.h>
++#include <cpu/cpu.h>
++#include <cpu/x86/msr.h>
++#include <device/device.h>
++#include <device/pci.h>
++#include <device/pci_ids.h>
++#include <soc/acpi.h>
++#include <soc/iomap.h>
++#include <soc/nvs.h>
++#include <string.h>
++#include <types.h>
++#include <boardid.h>
++#include "onboard.h"
++
++void acpi_create_gnvs(global_nvs_t *gnvs)
++{
++	memset(gnvs, 0, sizeof(*gnvs));
++
++	acpi_init_gnvs(gnvs);
++
++	/* Enable USB ports in S3 */
++	gnvs->s3u0 = 1;
++	gnvs->s3u1 = 1;
++
++	/* Disable USB ports in S5 */
++	gnvs->s5u0 = 0;
++	gnvs->s5u1 = 0;
++
++	/* Disable DPTF */
++	gnvs->dpte = 0;
++
++	/* PMIC is configured in I2C1, hidden it from OS */
++	gnvs->dev.lpss_en[LPSS_NVS_I2C2] = 0;
++}
++
++unsigned long acpi_fill_madt(unsigned long current)
++{
++	/* Local APICs */
++	current = acpi_create_madt_lapics(current);
++
++	/* IOAPIC */
++	current += acpi_create_madt_ioapic((acpi_madt_ioapic_t *) current,
++				2, IO_APIC_ADDR, 0);
++
++	current = acpi_madt_irq_overrides(current);
++
++	return current;
++}
+diff --git a/src/mainboard/solidrun/braswell_som/board_info.txt b/src/mainboard/solidrun/braswell_som/board_info.txt
+new file mode 100644
+index 0000000000..0cf00b4d5b
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/board_info.txt
+@@ -0,0 +1,6 @@
++Vendor name: SolidRun
++Board name: Braswell SOM
++Category: sbc
++ROM protocol: SPI
++ROM socketed: n
++Flashrom support: n
+diff --git a/src/mainboard/solidrun/braswell_som/boardid.c b/src/mainboard/solidrun/braswell_som/boardid.c
+new file mode 100644
+index 0000000000..917f46447e
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/boardid.c
+@@ -0,0 +1,26 @@
++/*
++ * This file is part of the coreboot project.
++ *
++ * Copyright(C) 2013 Google Inc.
++ * Copyright (C) 2015 Intel Corp.
++ * Copyright (C) 2017 Andreas Galauner <andreas@galauner.de>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; version 2 of the License.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ */
++
++#include <boardid.h>
++#include <stdlib.h>
++
++uint8_t board_id(void)
++{
++	MAYBE_STATIC int id = -1;
++
++	return id;
++}
+diff --git a/src/mainboard/solidrun/braswell_som/cmos.layout b/src/mainboard/solidrun/braswell_som/cmos.layout
+new file mode 100644
+index 0000000000..ae46e10647
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/cmos.layout
+@@ -0,0 +1,133 @@
++##
++## This file is part of the coreboot project.
++##
++## Copyright (C) 2007-2008 coresystems GmbH
++## Copyright (C) 2015 Intel Corp.
++##
++## This program is free software; you can redistribute it and/or modify
++## it under the terms of the GNU General Public License as published by
++## the Free Software Foundation; version 2 of the License.
++##
++## This program is distributed in the hope that it will be useful,
++## but WITHOUT ANY WARRANTY; without even the implied warranty of
++## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++## GNU General Public License for more details.
++##
++
++# -----------------------------------------------------------------
++entries
++
++#start-bit length  config config-ID    name
++#0            8       r       0        seconds
++#8            8       r       0        alarm_seconds
++#16           8       r       0        minutes
++#24           8       r       0        alarm_minutes
++#32           8       r       0        hours
++#40           8       r       0        alarm_hours
++#48           8       r       0        day_of_week
++#56           8       r       0        day_of_month
++#64           8       r       0        month
++#72           8       r       0        year
++# -----------------------------------------------------------------
++# Status Register A
++#80           4       r       0        rate_select
++#84           3       r       0        REF_Clock
++#87           1       r       0        UIP
++# -----------------------------------------------------------------
++# Status Register B
++#88           1       r       0        auto_switch_DST
++#89           1       r       0        24_hour_mode
++#90           1       r       0        binary_values_enable
++#91           1       r       0        square-wave_out_enable
++#92           1       r       0        update_finished_enable
++#93           1       r       0        alarm_interrupt_enable
++#94           1       r       0        periodic_interrupt_enable
++#95           1       r       0        disable_clock_updates
++# -----------------------------------------------------------------
++# Status Register C
++#96           4       r       0        status_c_rsvd
++#100          1       r       0        uf_flag
++#101          1       r       0        af_flag
++#102          1       r       0        pf_flag
++#103          1       r       0        irqf_flag
++# -----------------------------------------------------------------
++# Status Register D
++#104          7       r       0        status_d_rsvd
++#111          1       r       0        valid_cmos_ram
++# -----------------------------------------------------------------
++# Diagnostic Status Register
++#112          8       r       0        diag_rsvd1
++
++# -----------------------------------------------------------------
++0          120       r       0        reserved_memory
++#120        264       r       0        unused
++
++# -----------------------------------------------------------------
++# RTC_BOOT_BYTE (coreboot hardcoded)
++384          1       e       4        boot_option
++388          4       h       0        reboot_counter
++#390          2       r       0        unused?
++
++# -----------------------------------------------------------------
++# coreboot config options: console
++392          3       e       5        baud_rate
++395          4       e       6        debug_level
++#399          1       r       0        unused
++
++# coreboot config options: cpu
++400          1       e       2        hyper_threading
++#401          7       r       0        unused
++
++# coreboot config options: southbridge
++408          1       e       1        nmi
++409          2       e       7        power_on_after_fail
++#411          5       r       0        unused
++
++# coreboot config options: bootloader
++#Used by ChromeOS:
++416        128       r        0        vbnv
++#544        440       r       0        unused
++
++# SandyBridge MRC Scrambler Seed values
++896         32        r       0        mrc_scrambler_seed
++928         32        r       0        mrc_scrambler_seed_s3
++
++# coreboot config options: check sums
++984         16       h       0        check_sum
++#1000        24       r       0        amd_reserved
++
++# -----------------------------------------------------------------
++
++enumerations
++
++#ID value   text
++1     0     Disable
++1     1     Enable
++2     0     Enable
++2     1     Disable
++4     0     Fallback
++4     1     Normal
++5     0     115200
++5     1     57600
++5     2     38400
++5     3     19200
++5     4     9600
++5     5     4800
++5     6     2400
++5     7     1200
++6     1     Emergency
++6     2     Alert
++6     3     Critical
++6     4     Error
++6     5     Warning
++6     6     Notice
++6     7     Info
++6     8     Debug
++6     9     Spew
++7     0     Disable
++7     1     Enable
++7     2     Keep
++# -----------------------------------------------------------------
++checksums
++
++checksum 392 415 984
+diff --git a/src/mainboard/solidrun/braswell_som/com_init.c b/src/mainboard/solidrun/braswell_som/com_init.c
+new file mode 100644
+index 0000000000..49c5205942
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/com_init.c
+@@ -0,0 +1,57 @@
++/*
++ * This file is part of the coreboot project.
++ *
++ * Copyright (C) 2013 Google Inc.
++ * Copyright (C) 2015 Intel Corp.
++ * Copyright (C) 2017 Andreas Galauner <andreas@galauner.de>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; version 2 of the License.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ */
++
++#include <arch/io.h>
++#include <soc/gpio.h>
++#include <soc/lpc.h>
++#include <soc/pci_devs.h>
++#include <soc/romstage.h>
++
++/*
++ * return family number and internal pad number in that community
++ * by pad number and which community it is in.
++ */
++
++
++
++	/* family number in high byte and inner pad number in lowest byte */
++
++void car_mainboard_pre_console_init(void)
++{
++	uint32_t reg;
++	uint32_t *pad_config_reg;
++
++	//uint32_t* pad_config_reg_sata_led_n = gpio_pad_config_reg(GP_SOUTHWEST, 43);
++	//write32(pad_config_reg_sata_led_n, 0x18100);
++
++	/* Enable the UART hardware for COM1. */
++	reg = 1;
++	pci_write_config32(PCI_DEV(0, LPC_DEV, 0), UART_CONT, reg);
++
++	/*
++	 * Set up the pads to select the UART function
++	 * AD12 SW16(UART1_DATAIN/UART0_DATAIN)   - Setting Mode 2 for UART0_RXD
++	 * AD10 SW20(UART1_DATAOUT/UART0_DATAOUT) - Setting Mode 2 for UART0_TXD
++	 */
++	pad_config_reg = gpio_pad_config_reg(GP_SOUTHWEST, UART1_RXD_PAD);
++	write32(pad_config_reg, SET_PAD_MODE_SELECTION(PAD_CONFIG0_DEFAULT0,
++		M2));
++
++	pad_config_reg = gpio_pad_config_reg(GP_SOUTHWEST, UART1_TXD_PAD);
++	write32(pad_config_reg, SET_PAD_MODE_SELECTION(PAD_CONFIG0_DEFAULT0,
++		M2));
++}
+diff --git a/src/mainboard/solidrun/braswell_som/devicetree.cb b/src/mainboard/solidrun/braswell_som/devicetree.cb
+new file mode 100644
+index 0000000000..25ef542a0d
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/devicetree.cb
+@@ -0,0 +1,132 @@
++chip soc/intel/braswell
++
++	############################################################
++	# Set the parameters for MemoryInit
++	############################################################
++
++	register "PcdMrcInitTsegSize" = "8"	# SMM Region size in MiB
++
++	register "PcdMrcInitMmioSize" = "0x0800"
++	register "PcdMrcInitSpdAddr1" = "0xa0"
++	register "PcdMrcInitSpdAddr2" = "0xa2"
++	register "PcdIgdDvmt50PreAlloc" = "1"
++	register "PcdApertureSize" = "2"
++	register "PcdGttSize" = "1"
++	register "PcdDvfsEnable" = "0"
++	register "PcdCaMirrorEn" = "1"
++
++	############################################################
++	# Set the parameters for SiliconInit
++	############################################################
++
++	register "PcdSdcardMode" = "PCH_ACPI_MODE"
++	register "PcdEnableHsuart0" = "1"
++	register "PcdEnableHsuart1" = "1"
++	register "PcdEnableAzalia" = "1"
++	register "PcdEnableXhci" = "1"
++	register "PcdEnableLpe" = "1"
++	register "PcdEnableDma0" = "1"
++	register "PcdEnableDma1" = "1"
++	register "PcdEnableI2C0" = "1"
++	register "PcdEnableI2C1" = "1"
++	register "PcdEnableI2C2" = "1"
++	register "PcdEnableI2C3" = "1"
++	register "PcdEnableI2C4" = "1"
++	register "PcdEnableI2C5" = "1"
++	register "PcdEnableI2C6" = "1"
++	register "PunitPwrConfigDisable" = "1"	# Disable SVID
++	register "ChvSvidConfig" = "SVID_PMIC_CONFIG"
++	register "PcdEmmcMode" = "PCH_ACPI_MODE"
++	register "PcdUsb3ClkSsc" = "1"
++	register "PcdDispClkSsc" = "1"
++	register "PcdSataClkSsc" = "1"
++	register "PcdEnableSata" = "1"
++	register "Usb2Port0PerPortPeTxiSet" = "7"
++	register "Usb2Port0PerPortTxiSet" = "5"
++	register "Usb2Port0IUsbTxEmphasisEn" = "2"
++	register "Usb2Port0PerPortTxPeHalf" = "1"
++	register "Usb2Port1PerPortPeTxiSet" = "7"
++	register "Usb2Port1PerPortTxiSet" = "3"
++	register "Usb2Port1IUsbTxEmphasisEn" = "2"
++	register "Usb2Port1PerPortTxPeHalf" = "1"
++	register "Usb2Port2PerPortPeTxiSet" = "7"
++	register "Usb2Port2PerPortTxiSet" = "3"
++	register "Usb2Port2IUsbTxEmphasisEn" = "2"
++	register "Usb2Port2PerPortTxPeHalf" = "1"
++	register "Usb2Port3PerPortPeTxiSet" = "7"
++	register "Usb2Port3PerPortTxiSet" = "3"
++	register "Usb2Port3IUsbTxEmphasisEn" = "2"
++	register "Usb2Port3PerPortTxPeHalf" = "1"
++	register "Usb2Port4PerPortPeTxiSet" = "7"
++	register "Usb2Port4PerPortTxiSet" = "3"
++	register "Usb2Port4IUsbTxEmphasisEn" = "2"
++	register "Usb2Port4PerPortTxPeHalf" = "1"
++	register "Usb3Lane0Ow2tapgen2deemph3p5" = "0x3a"
++	register "Usb3Lane1Ow2tapgen2deemph3p5" = "0x64"
++	register "Usb3Lane2Ow2tapgen2deemph3p5" = "0x64"
++	register "Usb3Lane3Ow2tapgen2deemph3p5" = "0x3a"
++	register "PcdSataInterfaceSpeed" = "3"
++	register "PcdPchSsicEnable" = "1"
++	register "PcdRtcLock" = "0"	# Disable RTC access locking to NVRAM
++	register "PMIC_I2CBus" = "0"
++	register "ISPEnable" = "0"		# Disable IUNIT
++	register "ISPPciDevConfig" = "3"
++	register "PcdSdDetectChk" = "0" # Disable SD card detect
++
++	# LPE audio codec settings
++	register "lpe_codec_clk_src" = "LPE_CLK_SRC_XTAL" # 19.2MHz clock
++
++	# Enable devices in ACPI mode
++	register "lpss_acpi_mode" = "1"
++	register "emmc_acpi_mode" = "1"
++	register "sd_acpi_mode" = "1"
++	register "lpe_acpi_mode" = "1"
++
++	# Disable SLP_X stretching after SUS power well fail.
++	register "disable_slp_x_stretch_sus_fail" = "1"
++
++	# Allow PCIe devices to wake system from suspend
++	register "pcie_wake_enable" = "1"
++
++	device cpu_cluster 0 on
++		device lapic 0 on end
++	end
++	device domain 0 on
++					# EDS Table 24-4, Figure 24-5
++		device pci 00.0 on end	# 8086 2280 - SoC transaction router
++		device pci 02.0 on end	# 8086 22b0/22b1 - B1/C0 stepping Graphics and Display
++		device pci 03.0 on end	# 8086 22b8 - Camera and Image Processor
++		device pci 0b.0 on end	# 8086 22dc - ?
++		device pci 10.0 on end	# 8086 2294 - MMC Port
++		device pci 11.0 on end	# 8086 0F15 - SDIO Port
++		device pci 12.0 on end	# 8086 0F16 - SD Port
++		device pci 13.0 on end	# 8086 22a3 - Sata controller
++		device pci 14.0 on end	# 8086 22b5 - USB XHCI - Only 1 USB controller at a time
++		device pci 15.0 on end	# 8086 22a8 - LP Engine Audio
++		device pci 16.0 on end	# 8086 22b7 - USB device
++		device pci 18.0 on end	# 8086 22c0 - SIO - DMA
++		device pci 18.1 on end	# 8086 22c1 -   I2C Port 1
++		device pci 18.2 on end	# 8086 22c2 -   I2C Port 2
++		device pci 18.3 on end	# 8086 22c3 -   I2C Port 3
++		device pci 18.4 on end	# 8086 22c4 -   I2C Port 4
++		device pci 18.5 on end	# 8086 22c5 -   I2C Port 5
++		device pci 18.6 on end	# 8086 22c6 -   I2C Port 6
++		device pci 18.7 on end	# 8086 22c7 -   I2C Port 7
++		device pci 1a.0 on end	# 8086 0F18 - Trusted Execution Engine
++		device pci 1b.0 on end	# 8086 0F04 - HD Audio
++		device pci 1c.0 on end	# 8086 0000 - PCIe Root Port 1
++		device pci 1c.1 on end	# 8086 0000 - PCIe Root Port 2
++		device pci 1c.2 on end	# 8086 0000 - PCIe Root Port 3
++		device pci 1c.3 on end	# 8086 0000 - PCIe Root Port 4
++		device pci 1e.0 on end	# 8086 2286 - SIO - DMA
++		device pci 1e.1 on end	# 8086 0F08 -   PWM 1
++		device pci 1e.2 on end	# 8086 0F09 -   PWM 2
++		device pci 1e.3 on end	# 8086 228a -   HSUART 1
++		device pci 1e.4 on end	# 8086 228c -   HSUART 2
++		device pci 1e.5 on end	# 8086 228e -   SPI 1
++		device pci 1e.6 on end	# 8086 2290 -   SPI 2
++		device pci 1e.7 on end	# 8086 22ac -   SPI 3
++		device pci 1f.0 on end	# 8086 229c - LPC bridge
++		device pci 1f.3 on end	# 8086 0F12 - SMBus 0
++	end
++end
+diff --git a/src/mainboard/solidrun/braswell_som/dsdt.asl b/src/mainboard/solidrun/braswell_som/dsdt.asl
+new file mode 100644
+index 0000000000..4748f29f8f
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/dsdt.asl
+@@ -0,0 +1,56 @@
++/*
++ * This file is part of the coreboot project.
++ *
++ * Copyright (C) 2007-2009 coresystems GmbH
++ * Copyright (C) 2011 Google Inc.
++ * Copyright (C) 2015 Intel Corp.
++ * Copyright (C) 2017 Andreas Galauner <andreas@galauner.de>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; version 2 of the License.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ */
++
++
++DefinitionBlock(
++	"dsdt.aml",
++	"DSDT",
++	0x05,		/* DSDT revision: ACPI v5.0 */
++	"COREv4",	/* OEM id */
++	"COREBOOT",	/* OEM table id */
++	0x20110725	/* OEM revision */
++)
++{
++	/* Some generic macros */
++	#include <acpi/platform.asl>
++
++	/* global NVS and variables */
++	#include <acpi/globalnvs.asl>
++
++	#include <acpi/cpu.asl>
++
++	Scope (\_SB) {
++		Device (PCI0)
++		{
++			#include <acpi/southcluster.asl>
++		}
++	}
++	Scope (\_SB.PCI0)
++	{
++		Device (RP03)
++		{
++			Name (_ADR, 0x001C0002)  // _ADR: Address
++			OperationRegion(RPXX, PCI_Config, 0x00, 0x10)
++		}
++	}
++
++	/* Chipset specific sleep states */
++	#include <acpi/sleepstates.asl>
++
++	#include "acpi/mainboard.asl"
++}
+diff --git a/src/mainboard/solidrun/braswell_som/fadt.c b/src/mainboard/solidrun/braswell_som/fadt.c
+new file mode 100644
+index 0000000000..9b6f7a935e
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/fadt.c
+@@ -0,0 +1,48 @@
++/*
++ * This file is part of the coreboot project.
++ *
++ * Copyright (C) 2007-2009 coresystems GmbH
++ * Copyright (C) 2015 Intel Corp.
++ * Copyright (C) 2017 Andreas Galauner <andreas@galauner.de>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; version 2 of the License.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ */
++
++#include <soc/acpi.h>
++#include <string.h>
++
++void acpi_create_fadt(acpi_fadt_t *fadt, acpi_facs_t *facs, void *dsdt)
++{
++	acpi_header_t *header = &(fadt->header);
++
++	memset((void *) fadt, 0, sizeof(acpi_fadt_t));
++	memcpy(header->signature, "FACP", 4);
++	header->length = sizeof(acpi_fadt_t);
++	header->revision = 3;
++	memcpy(header->oem_id, OEM_ID, 6);
++	memcpy(header->oem_table_id, ACPI_TABLE_CREATOR, 8);
++	memcpy(header->asl_compiler_id, ASLC, 4);
++	header->asl_compiler_revision = 1;
++
++	fadt->firmware_ctrl = (unsigned long) facs;
++	fadt->dsdt = (unsigned long) dsdt;
++	fadt->model = 1;
++	fadt->preferred_pm_profile = PM_MOBILE;
++
++	fadt->x_firmware_ctl_l = (unsigned long)facs;
++	fadt->x_firmware_ctl_h = 0;
++	fadt->x_dsdt_l = (unsigned long)dsdt;
++	fadt->x_dsdt_h = 0;
++
++	acpi_fill_in_fadt(fadt);
++
++	header->checksum =
++	    acpi_checksum((void *) fadt, header->length);
++}
+diff --git a/src/mainboard/solidrun/braswell_som/gpio.c b/src/mainboard/solidrun/braswell_som/gpio.c
+new file mode 100644
+index 0000000000..202c7834d5
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/gpio.c
+@@ -0,0 +1,673 @@
++/*
++ * This file is part of the coreboot project.
++ *
++ * Copyright(C) 2013 Google Inc.
++ * Copyright (C) 2015 Intel Corp.
++ * Copyright (C) 2017 Andreas Galauner <andreas@galauner.de>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; version 2 of the License.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ */
++
++#include "irqroute.h"
++#include <soc/gpio.h>
++#include <stdlib.h>
++#include <boardid.h>
++#include "onboard.h"
++#include "gpio.h"
++
++//Clocks:
++//	1.		Unused
++//	2.		Unused
++//	3.		Unused
++//	4.		Unused
++//	5.		Unused
++
++//PWM (Hardware not present, could be used as GPIO):
++//	0		Unconnected
++//	1		Unconnected
++
++//SDMMC1:	eMMC?
++//SDMMC2:	Not present
++//SDMMC3:	SD-Card on headers
++//FIXME: Check if pullups are necessary
++
++//LPC:		All unconnected
++//	AD3 (GPIO):		MCU_RESET
++//	AD1 (GPIO):		MCU_BOOT0
++
++//GPIO_DFX	Memory config
++//	DFX6
++//	DFX7
++//	DFX8
++
++/* South East Community */
++static const struct soc_gpio_map gpse_gpio_map[] = {
++	// /*
++	//   FED9C400: 80 03 11 00 00 00 C0 05-00 03 11 00 00 00 C0 05  *................*
++	//   FED9C410: 80 03 11 00 00 00 C0 05-00 03 13 00 00 00 C0 05  *................*
++	//   FED9C420: 80 03 11 00 00 00 C0 05-00 03 11 00 00 00 C0 05  *................*
++	//   FED9C430: 00 03 13 00 00 00 C0 05-80 03 11 00 00 00 C0 05  *................*
++	// */
++	// GPIO_NC,																			/* 00 MF_PLT_CLK0 */	/*  */
++	// GPIO_NC,																			/* 01 PWM1 */			/*  */
++	// GPIO_NC,																			/* 02 MF_PLT_CLK1 */	/*  */
++	// GPIO_NC,																			/* 03 MF_PLT_CLK4 */	/*  */
++	// GPIO_NC,																			/* 04 MF_PLT_CLK3 */	/*  */
++	// GPIO_NC,																			/* 05 PWM0*/			/*  */
++	// GPIO_NC,																			/* 06 MF_PLT_CLK5 */	/*  */
++	// GPIO_NC,																			/* 07 MF_PLT_CLK2 */	/*  */
++
++	/*SE00 */ { .pad_conf0 = 0x00110380, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE01 */ GPIO_SKIP,
++	/*SE02 */ { .pad_conf0 = 0x00110380, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE03 */ { .pad_conf0 = 0x00130300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE04 */ { .pad_conf0 = 0x00110380, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE05 */ GPIO_SKIP,
++	/*SE06 */ { .pad_conf0 = 0x00130300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE07 */ { .pad_conf0 = 0x00110380, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++
++
++	// /*
++	//   FED9C800: 81 03 91 00 00 00 C0 05-81 03 11 00 00 00 C0 05  *................*
++	//   FED9C810: 81 03 91 00 00 00 C0 05-81 03 91 00 00 00 C0 05  *................*
++	//   FED9C820: 80 03 11 00 00 00 C0 05-81 03 91 00 00 00 C0 05  *................*
++	//   FED9C830: 81 03 91 00 00 00 C0 05-81 03 91 00 00 00 C0 05  *................*
++	//   FED9C840: 81 03 91 00 00 00 C0 05-81 03 91 00 00 00 C0 05  *................*
++	//   FED9C850: 81 03 91 00 00 00 C0 05-81 03 91 00 00 00 C0 05  *................*
++	// */
++	// GPIO_NC,																			/* 15 SDMMC2_D3_CD_B */	/*  */
++	// Native_M1,																			/* 16 SDMMC1_CLK */		/* SDMMC1_CLK */
++	// NATIVE_PU20K(1),																	/* 17 SDMMC1_D0 */		/* SDMMC1_D_0 */
++	// GPIO_NC,																			/* 18 SDMMC2_D1 */		/*  */
++	// GPIO_NC,																			/* 19 SDMMC2_CLK */		/*  */
++	// NATIVE_PU20K(1),																	/* 20 SDMMC1_D2 */		/* SDMMC1_D_2 */
++	// GPIO_NC,																			/* 21 SDMMC2_D2 */		/*  */
++	// GPIO_NC,																			/* 22 SDMMC2_CMD  */	/*  */
++	// NATIVE_PU20K(1),																	/* 23 SDMMC1_CMD */		/* SDMMC1_CMD */
++	// NATIVE_PU20K(1),																	/* 24 SDMMC1_D1 */		/* SDMMC1_D_1 */
++	// GPIO_NC,																			/* 25 SDMMC2_D0 */		/*  */
++	// NATIVE_PU20K(1),																	/* 26 SDMMC1_D3_CD_B */	/* SDMMC1_D_3_CD_B */
++
++	/*SE15 */ GPIO_SKIP,
++	/*SE16 */ { .pad_conf0 = 0x00110380, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE17 */ { .pad_conf0 = 0x00910381, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE18 */ GPIO_SKIP,
++	/*SE19 */ GPIO_SKIP,
++	/*SE20 */ { .pad_conf0 = 0x00910381, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE21 */ GPIO_SKIP,
++	/*SE22 */ GPIO_SKIP,
++	/*SE23 */ { .pad_conf0 = 0x00910381, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE24 */ { .pad_conf0 = 0x00910381, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE25 */ GPIO_SKIP,
++	/*SE26 */ { .pad_conf0 = 0x00910381, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++
++
++	///*
++	//  FED9CC00: 81 03 91 00 00 00 C0 05-80 03 11 00 00 00 C0 05  *................*
++	//  FED9CC10: 81 03 91 00 00 00 C0 05-81 03 91 00 00 00 C0 05  *................*
++	//  FED9CC20: 81 03 91 00 00 00 C0 05-81 03 91 00 00 00 C0 05  *................*
++	//*/
++	//NATIVE_PU20K(1),																	/* 30 SDMMC3_D1 */		/* SDMMC3_D1 */
++	//Native_M1,																			/* 31 SDMMC3_CLK */		/* SDMMC3_CLK */
++	//NATIVE_PU20K(1),																	/* 32 SDMMC3_D3 */		/* SDMMC3_D3 */
++	//NATIVE_PU20K(1),																	/* 33 SDMMC3_D2 */		/* SDMMC3_D2 */
++	//NATIVE_PU20K(1),																	/* 34 SDMMC3_CMD */		/* SDMMC3_CMD */
++	//NATIVE_PU20K(1),																	/* 35 SDMMC3_D0 */		/* SDMMC3_D0 */
++	
++	/*SE30 */ { .pad_conf0 = 0x00910381, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE31 */ { .pad_conf0 = 0x00110380, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE32 */ { .pad_conf0 = 0x00910381, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE33 */ { .pad_conf0 = 0x00910381, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE34 */ { .pad_conf0 = 0x00910381, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE35 */ { .pad_conf0 = 0x00910381, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++
++
++
++	// /*
++	//   FED9D000: 01 03 91 00 00 00 C0 05-01 03 91 00 00 00 C0 05  *................*
++	//   FED9D010: 01 03 91 00 00 00 C0 05-01 03 91 00 00 00 C0 05  *................*
++	//   FED9D020: 00 03 11 00 00 00 C0 05-02 81 91 00 00 00 C0 05  *................*
++	//   FED9D030: 00 03 11 00 00 00 C0 05-02 81 91 00 00 00 C0 05  *................*
++	// */
++	// GPIO_NC,																			/* 45 MF_LPC_AD2 */		/*  */
++	// GPIO_NC,																			/* 46 LPC_CLKRUNB */	/*  */
++	// GPIO_NC,																			/* 47 MF_LPC_AD0 */		/*  */
++	// GPIO_NC,																			/* 48 LPC_FRAMEB */		/*  */
++	// GPIO_NC,																			/* 49 MF_LPC_CLKOUT1 */	/*  */
++	// GPIO_OUT_HIGH,																		/* 50 MF_LPC_AD3 */		/* MCU_RESET */
++	// GPIO_NC,																			/* 51 MF_LPC_CLKOUT0 */	/*  */
++	// GPIO_OUT_HIGH,																		/* 52 MF_LPC_AD1 */		/* MCU_BOOT0 */
++
++	/*SE45 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE46 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE47 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE48 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE49 */ GPIO_SKIP,
++	/*SE50 */ { .pad_conf0 = 0x00918102, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE51 */ { .pad_conf0 = 0x00110300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE52 */ { .pad_conf0 = 0x00918102, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++
++
++	// /*
++	//   FED9D400: 02 82 91 58 19 00 C0 05-02 81 91 00 00 00 C0 05  *...X............*
++	//   FED9D410: 01 82 91 4C 01 00 C0 05-81 03 91 00 00 00 C0 05  *...L............*
++	//   FED9D420: 02 81 91 00 00 00 C0 05-81 03 91 00 00 00 C0 05  *................*
++	//   FED9D430: 02 81 91 00 00 00 C0 05-81 03 91 00 00 00 C0 05  *................*
++	//   FED9D440: 81 03 91 00 00 00 C0 05-80 03 11 00 00 00 C0 05  *................*
++	// */
++	// GPI(trig_edge_low, L5, P_20K_H, non_maskable, en_rx_data, UNMASK_WAKE , NA),		/* 60 SPI1_MISO */		/* PMIC_IRQ_1P8 */ 				/* Open drain? */	/* FIXME: InvRX_Enable - is this connected to the PMIC? */
++	// GPIO_NC,																			/* 61 SPI1_CS0_B */		/*  */
++	// GPIO_NC,																			/* 62 SPI1_CLK */		/*  */
++	// NATIVE_PU20K(1),																	/* 63 MMC1_D6 */		/* MMC1_D6 */
++	// GPIO_NC,																			/* 64 SPI1_MOSI */		/*  */
++	// NATIVE_PU20K(1),																	/* 65 MMC1_D5 */		/* MMC1_D5 */
++	// GPIO_OUT_HIGH,																		/* 66 SPI1_CS1_B */		/* LAN P0 ISOLATE */			/* FIXME: check if this pin is actually used as P0 Isolate */	//FIXME: Find P1 isolate
++	// NATIVE_PU20K(1),																	/* 67 MMC1_D4_SD_WE */	/* MMC1_D4 */
++	// NATIVE_PU20K(1),																	/* 68 MMC1_D7 */		/* MMC1_D7 */
++	// GPIO_NC,																			/* 69 MMC1_RCLK */		/*  */
++
++	/*SE60 */ { .pad_conf0 = 0x58918200, .pad_conf1 = 0x05C00019, .wake_mask = 1, .int_mask = 1, .gpe = 0 },
++	/*SE61 */ { .pad_conf0 = 0x00918102, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE62 */ { .pad_conf0 = 0x4C918201, .pad_conf1 = 0x05C00001, .wake_mask = 0, .int_mask = 1, .gpe = 0 },
++	/*SE63 */ { .pad_conf0 = 0x00910381, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE64 */ { .pad_conf0 = 0x00918102, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE65 */ { .pad_conf0 = 0x00910381, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE66 */ { .pad_conf0 = 0x00918102, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE67 */ { .pad_conf0 = 0x00910381, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE68 */ { .pad_conf0 = 0x00910381, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE69 */ GPIO_SKIP,
++
++
++	// /*
++	//   FED9D800: 01 03 91 00 00 00 C0 05-01 03 91 00 00 00 C0 05  *................*
++	//   FED9D810: 01 82 91 14 01 00 C0 05-00 03 11 00 00 00 C0 05  *................*
++	//   FED9D820: 01 03 91 00 00 00 C0 05-01 03 91 00 00 00 C0 05  *................*
++	//   FED9D830: 00 02 91 10 04 00 C0 05-00 03 91 00 00 00 C0 05  *................*
++	//   FED9D840: 00 03 11 00 00 00 C0 05-00 03 11 00 00 00 C0 05  *................*
++	//   FED9D850: 00 03 11 00 00 00 C0 05-FF FF FF FF FF FF FF FF  *................*
++	// */
++	// Native_M1,																			/* 75 USB_OC1_B */			/* USB_OC1_B */				/* FIXME: pulls? */
++	// Native_M1,																			/* 76 PMU_RESETBUTTON_B */	/* PMU_RESETBUTTON_B */		/* FIXME: pulls? */
++	// GPIO_NC,																			/* 77 GPIO_ALERT   */		/*  */
++	// Native_M1,																			/* 78 SDMMC3_PWR_EN_B */	/* SD_CARD_PWRDN_N */		/* FIXME: pulls? */	//FIXME: Connected?
++	// GPIO_NC,																			/* 79 ILB_SERIRQ */			/*  */
++	// Native_M1,																			/* 80 USB_OC0_B */			/* USB_OC0_B */				/* FIXME: pulls? */
++	// NATIVE_INT_PU20K(1, L1),															/* 81 SDMMC3_CD_B */		/* SD_CARD_DET_N */			/* FIXME: Native M1, no pull, trig_level, invert */
++	// SPEAKER,																			/* 82 SPKR */				/* SPKR */
++	// GPIO_NC,																			/* 83 SUSPWRDNACK */		/*  */
++	// Native_M1,																			/* 84 SDMMC1_RCLK */		/* SDMMC1_RCLK */			/* FIXME: no SPARE_PIN!? check if NC */
++	// Native_M1,																			/* 85 SDMMC3_1P8_EN */		/* SD_CARD_PWR_EN */		/* FIXME: check if NC */
++
++	/*SE75 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE76 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE77 */ { .pad_conf0 = 0x14918201, .pad_conf1 = 0x05C00001, .wake_mask = 1, .int_mask = 1, .gpe = 0 },
++	/*SE78 */ { .pad_conf0 = 0x00110301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE79 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE80 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE81 */ { .pad_conf0 = 0x10910300, .pad_conf1 = 0x05C00004, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE82 */ GPIO_SKIP,
++	/*SE83 */ { .pad_conf0 = 0x00110300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE84 */ { .pad_conf0 = 0x00110380, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SE85 */ { .pad_conf0 = 0x00110300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++
++
++	GPIO_END
++};
++
++/* South West Community */
++static const struct soc_gpio_map  gpsw_gpio_map[] = {
++	// /*
++	//   FED84400: 01 03 91 00 00 00 C0 05-00 03 91 00 00 00 C0 05  *................*
++	//   FED84410: 00 03 91 00 00 00 C0 05-01 03 91 00 00 00 C0 05  *................*
++	//   FED84420: 02 81 91 00 00 00 C0 05-01 03 91 00 00 00 C0 05  *................*
++	//   FED84430: 01 03 91 00 00 00 C0 05-00 81 21 00 00 00 C0 05  *..........!.....*
++	// */
++	// GPIO_NC,																			/* 00 FST_SPI_D2 */			/*  */
++	// Native_M1,																			/* 01 FST_SPI_D0 */			/* SPI_D0 */
++	// Native_M1,																			/* 02 FST_SPI_CLK */		/* SPI_CLK */
++	// GPIO_NC,																			/* 03 FST_SPI_D3 */			/*  */
++	// GPIO_NC,																			/* 04 FST_SPI_CS1_B */		/*  */
++	// Native_M1,																			/* 05 FST_SPI_D1 */			/* SPI_D1 */
++	// Native_M1,																			/* 06 FST_SPI_CS0_B */		/* SPI_CS (SPI NOR on SOM) */
++	// GPIO_NC,																			/* 07 FST_SPI_CS2_B */		/*  */
++
++	/*SW00 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW01 */ { .pad_conf0 = 0x00910300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW02 */ { .pad_conf0 = 0x00910300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW03 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW04 */ { .pad_conf0 = 0x00918102, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW05 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW06 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW07 */ { .pad_conf0 = 0x00218100, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++
++
++	// /*
++	//   FED84800: 00 00 C0 04 00 00 C0 05-01 00 02 00 00 00 C0 04  *................*
++	//   FED84810: 01 03 91 00 00 00 C0 05-00 00 01 00 00 00 C0 04  *................*
++	//   FED84820: 01 03 91 00 00 00 C0 05-01 00 02 00 00 00 C0 04  *................*
++	//   FED84830: 01 03 91 00 00 00 C0 05-01 03 91 00 00 00 C0 05  *................*
++  	// */
++	// Native_M1,																			/* 15 UART1_RTS_B */		/* UART1_RTS_B */
++	// Native_M2,																			/* 16 UART1_RXD */			/* UART1_RXD */		//NOTE: set to UART0 for debugging
++	// Native_M1,																			/* 17 UART2_RXD */			/* UART2_RXD */
++	// Native_M1,																			/* 18 UART1_CTS_B */		/* UART1_CTS_B */
++	// Native_M1,																			/* 19 UART2_RTS_B */		/* UART2_RTS_B */
++	// Native_M2,																			/* 20 UART1_TXD */			/* UART1_TXD */		//NOTE: set to UART0 for debugging
++	// Native_M1,																			/* 21 UART2_TXD */			/* UART2_TXD */
++	// Native_M1,																			/* 22 UART2_CTS_B */		/* UART2_CTS_B */
++
++	/*SW15 */ GPIO_SKIP, //{ .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW16 */ GPIO_SKIP, //{ .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW17 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW18 */ GPIO_SKIP,
++	/*SW19 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW20 */ GPIO_SKIP,
++	/*SW21 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW22 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++
++
++	// /*
++	//   FED84C00: 01 03 12 00 00 00 C0 05-01 03 12 00 00 00 C0 05  *................*
++	//   FED84C10: 00 03 12 00 00 00 C0 05-00 03 12 00 00 00 C0 05  *................*
++	//   FED84C20: 00 03 11 00 20 00 C0 05-00 03 12 00 00 00 C0 05  *.... ...........*
++	//   FED84C30: 00 03 11 00 00 00 C0 05-00 03 11 00 00 00 C0 05  *................*
++  	// */
++	// Native_M2,																			/* 30 MF_HDA_CLK */					/* MF_HDA_CLK II GP_SSP_0_I2S_TXD */
++	// Native_M2,																			/* 31 GPIO_SW31/MF_HDA_RSTB */		/* AUD_LINK_RST_N || I2S_0_CLK_R_AICO (AIC) */
++	// Native_M2,																			/* 32 GPIO_SW32 /MF_HDA_SDI0 */		/* AUD_LINK_SDI0 (ALC282) || I2S_2_CLK_R_AICO (AIC) */
++	// Native_M2,																			/* 33 MF_HDA_SDO */					/* AUD_LINK_SDO_R||I2S_0_RXD_R_AICO (AIC) */
++	// GPIO_NC,																			/* 34 MF_HDA_DOCKRSTB */			/* I2S_2_TXD_R_AICO (AIC) */
++	// Native_M2,																			/* 35 MF_HDA_SYNC */				/* AUD_LINKSYNC_R|| I2S_0_FS_R_AICO (AIC) */
++	// GPIO_NC,																			/* 36 GPIO_SW36 MF_HDA_SDI1 */		/* I2S_2_FS_R_AICO */
++	// GPIO_NC,																			/* 37 MF_HDA_DOCKENB */				/* I2S_2_RXD_R_AICO(AIC) */
++
++	/*SW30 */ { .pad_conf0 = 0x00120300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW31 */ { .pad_conf0 = 0x00120300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW32 */ { .pad_conf0 = 0x00120300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW33 */ { .pad_conf0 = 0x00120300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW34 */ { .pad_conf0 = 0x00110300, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW35 */ { .pad_conf0 = 0x00120300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW36 */ { .pad_conf0 = 0x00110300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW37 */ { .pad_conf0 = 0x00110300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++
++	// /*
++	//   FED85000: 01 03 C1 00 20 00 C0 05-01 03 C1 00 20 00 C0 05  *.... ....... ...*
++	//   FED85010: 01 03 C1 00 20 00 C0 05-01 03 C1 00 20 00 C0 05  *.... ....... ...*
++	//   FED85020: 01 03 91 00 20 00 C0 05-01 03 C1 00 20 00 C0 05  *.... ....... ...*
++	//   FED85030: 01 03 C1 00 20 00 C0 05-01 03 91 00 20 00 C0 05  *.... ....... ...*
++	// */
++	// GPIO_NC,																			/* 45 I2C5_SDA */					/* Touch Panel */
++	// NATIVE_PU1K_CSEN_INVTX(1),															/* 46 I2C4_SDA */					/* I2C Audio | Touch PAD */
++	// GPIO_NC,																			/* 47 I2C6_SDA */					/* INA Device */
++	// GPIO_NC,																			/* 48 I2C5_SCL */					/* Touch Panel */
++	// GPIO_NC,																			/* 49 I2C_NFC_SDA */				/* ?? */
++	// NATIVE_PU1K_CSEN_INVTX(1),															/* 50 I2C4_SCL */					/* I2C Audio | Touch PAD */
++	// GPIO_NC,																			/* 51 I2C6_SCL */					/* INA Decice */
++	// GPIO_NC,																			/* 52 I2C_NFC_SCL */				/* ?? */
++
++	/*SW45 */ { .pad_conf0 = 0x00C10301, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW46 */ { .pad_conf0 = 0x00C10301, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW47 */ { .pad_conf0 = 0x00C10301, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW48 */ { .pad_conf0 = 0x00C10301, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW49 */ GPIO_SKIP,
++	/*SW50 */ { .pad_conf0 = 0x00C10301, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW51 */ { .pad_conf0 = 0x00C10301, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW52 */ GPIO_SKIP,
++
++	// /*
++	//   FED85400: 01 03 C1 00 20 00 C0 05-01 03 C1 00 20 00 C0 05  *.... ....... ...*
++	//   FED85410: 01 03 C1 00 20 00 C0 05-01 03 C1 00 20 00 C0 05  *.... ....... ...*
++	//   FED85420: 01 03 C1 00 20 00 C0 05-01 03 C1 00 20 00 C0 05  *.... ....... ...*
++	//   FED85430: 01 03 C1 00 20 00 C0 05-01 03 C1 00 20 00 C0 05  *.... ....... ...*
++	// */
++	// NATIVE_PU1K_CSEN_INVTX(1),															/* 60 I2C1_SDA */					/* PMIC */
++	// GPIO_NC,																			/* 61 I2C0_SDA */					/* 3rd party Sensor Card */
++	// GPIO_NC,																			/* 62 I2C2_SDA */					/* MIPI_CSI CAMERAS, FLASH */
++	// NATIVE_PU1K_CSEN_INVTX(1),															/* 63 I2C1_SCL */					/* PMIC */
++	// GPIO_NC,																			/* 64 I2C3_SDA */					/* MIPI_CSI CAMERAS, FLASH */
++	// GPIO_NC,																			/* 65 I2C0_SCL */					/* 3rd party Sensor Card */
++	// GPIO_NC,																			/* 66 I2C2_SCL */					/* MIPI_CSI CAMERAS, FLASH */
++	// GPIO_NC,																			/* 67 I2C3_SCL */					/* MIPI_CSI CAMERAS, FLASH */
++
++	/*SW60 */ { .pad_conf0 = 0x00C10301, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW61 */ { .pad_conf0 = 0x00C10301, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW62 */ { .pad_conf0 = 0x00C10301, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW63 */ { .pad_conf0 = 0x00C10301, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW64 */ { .pad_conf0 = 0x00C10301, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW65 */ { .pad_conf0 = 0x00C10301, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW66 */ { .pad_conf0 = 0x00C10301, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW67 */ { .pad_conf0 = 0x00C10301, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++
++
++	// /*
++	//   FED85800: 00 80 11 00 00 00 C0 05-00 82 C1 0C 11 00 C0 05  *................*
++	//   FED85810: 01 03 11 00 00 00 C0 05-00 03 11 00 00 00 C0 05  *................*
++	//   FED85820: 01 03 91 00 00 00 C0 05-02 00 11 00 00 00 C0 05  *................*
++	//   FED85830: 01 03 91 00 00 00 C0 05-01 03 91 00 00 00 C0 05  *................*
++	// */
++	// GPIO_NC,																			/* 75 SATA_GP0 */						/* TOUCH_PNL_RST_N */
++	// GPIO_NC,																			/* 76 SATA_GP1 */						/* TOUCH_INT_N */
++	// Native_M1,																			/* 77 SATA_LEDN */						/* SATA_LED_N */
++	// Native_M1,																			/* 78 SATA_GP2 */						/* SATA_DEVSLP_R */
++	// GPIO_NC,																			/* 79 MF_SMB_ALERTB */					/* MF_SMB_ALERTB */
++	// Native_M1,																			/* 80 SATA_GP3 */						/* eMMC_RST_N */
++	// GPIO_NC,																			/* 81 NFC_DEV_WAKE , MF_SMB_CLK */		/* MF_SMB_CLK */
++	// GPIO_NC,																			/* 82 NFC_FW_DOWNLOAD, MF_SMB_DATA */	/* MF_SMB_DATA */
++
++	/*SW75 */ { .pad_conf0 = 0x00118000, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW76 */ { .pad_conf0 = 0x0CC18200, .pad_conf1 = 0x05C00011, .wake_mask = 0, .int_mask = 1, .gpe = 0 },
++	/*SW77 */ { .pad_conf0 = 0x00110301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW78 */ { .pad_conf0 = 0x00110300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW79 */ GPIO_SKIP,
++	/*SW80 */ { .pad_conf0 = 0x00110002, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW81 */ GPIO_SKIP,
++	/*SW82 */ GPIO_SKIP,
++
++
++	// /*
++	//   FED85C00: 01 03 91 00 00 00 C0 05-01 03 91 00 00 00 C0 05  *................*
++	//   FED85C10: 00 03 11 00 00 00 C0 05-00 03 91 00 00 00 C0 05  *................*
++	//   FED85C20: 00 03 11 00 00 00 C0 05-00 03 91 00 00 00 C0 05  *................*
++	//   FED85C30: 00 03 11 00 00 00 C0 05-00 03 11 00 20 00 C0 05  *............ ...*
++	// */
++	// Native_M1,																			/* 90 PCIE_CLKREQ0B */				/* RTL8111G (CLKREQ_N) */
++	// Native_M1,																			/* 91 PCIE_CLKREQ1B */				/* NGFF(CLKREQ_N) */
++	// GPIO_NC,																			/* 92 GP_SSP_2_CLK */				/* ?? */
++	// Native_M1,																			/* 93 PCIE_CLKREQ2B */				/* On uSOM NIC CLK Request */
++	// GPIO_NC,																			/* 94 GP_SSP_2_RXD */				/* ?? */
++	// Native_M1,																			/* 95 PCIE_CLKREQ3B */				/* Tied to Micro SD */				//FIXME: What does this pin do? Is it even a CLKREQ?
++	// GPIO_NC,																			/* 96 GP_SSP_2_FS */				/* ?? */
++	// GPIO_NC,																			/* 97 GP_SSP_2f_TXD */				/* ?? */
++
++	/*SW90 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW91 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW92 */ GPIO_SKIP,
++	/*SW93 */ { .pad_conf0 = 0x00910300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW94 */ GPIO_SKIP,
++	/*SW95 */ { .pad_conf0 = 0x00910300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*SW96 */ GPIO_SKIP,
++	/*SW97 */ GPIO_SKIP,
++
++
++	GPIO_END
++};
++
++
++/* North Community */
++static const struct soc_gpio_map  gpn_gpio_map[] = {
++//	/*
++//	  FED8C400: 02 81 11 00 00 00 C0 05-00 82 01 2C 21 00 C0 05  *...........,!...*
++//	  FED8C410: 02 82 91 00 01 80 91 00-00 80 11 00 00 00 C0 05  *................*
++//	  FED8C420: 02 81 91 00 00 00 C0 05-02 81 11 00 00 00 C0 05  *................*
++//	  FED8C430: 03 82 91 00 01 80 91 00-00 81 11 00 00 00 C0 05  *................*
++//	  FED8C440: 03 82 91 00 01 80 91 00-FF FF FF FF FF FF FF FF  *................*
++//	*/
++//	GPIO_OUT_HIGH,																		/* 00 GPIO_DFX0 */				/* LAN P0 RESET */						//FIXME: Is this a reset?
++//	GPIO_NC,																			/* 01 GPIO_DFX3 */				/* ?? */
++//	GPIO_INPUT_PU_20K,																	/* 02 GPIO_DFX7 */				/* RAMID */
++//	GPIO_NC,																			/* 03 GPIO_DFX1 */				/* ?? */
++//	GPIO_NC,																			/* 04 GPIO_DFX5 */				/* ?? */
++//	GPIO_NC,																			/* 05 GPIO_DFX4 */				/* ?? */
++//	GPIO_INPUT_PU_20K,																	/* 06 GPIO_DFX8 */				/* RAMID */
++//	GPIO_NC,																			/* 07 GPIO_DFX2 */				/* ?? */
++//	GPIO_INPUT_PU_20K,																	/* 08 GPIO_DFX6 */				/* RAMID */
++
++	/*N00 */ { .pad_conf0 = 0x00118102, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N01 */ { .pad_conf0 = 0x2C018200, .pad_conf1 = 0x05C00021, .wake_mask = 0, .int_mask = 1, .gpe = 0 },
++	/*N02 */ GPIO_SKIP,
++	/*N03 */ { .pad_conf0 = 0x00118000, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N04 */ { .pad_conf0 = 0x00918102, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N05 */ { .pad_conf0 = 0x00118102, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N06 */ { .pad_conf0 = 0x00918203, .pad_conf1 = 0x00918001, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N07 */ { .pad_conf0 = 0x00918202, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N08 */ { .pad_conf0 = 0x00918203, .pad_conf1 = 0x00918001, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++
++//	/*
++//	  FED8C800: 00 82 01 3C 01 00 C0 05-00 82 11 00 00 00 C0 05  *...<............*
++//	  FED8C810: 00 82 11 4C 01 00 C0 05-00 82 91 FC 01 00 C0 05  *...L............*
++//	  FED8C820: 01 03 16 00 00 00 C0 05-00 02 91 00 00 00 C0 05  *................*
++//	  FED8C830: 00 03 11 00 00 00 C0 05-01 03 96 00 00 00 C0 05  *................*
++//	  FED8C840: 00 03 91 00 00 00 C0 05-02 81 91 00 00 00 C0 05  *................*
++//	  FED8C850: 01 82 91 EC 01 00 C0 05-01 03 A1 00 00 00 C0 05  *................*
++//	  FED8C860: 00 82 11 00 00 00 C0 05-FF FF FF FF FF FF FF FF  *................*
++//	*/
++//	GPIO_NC,																			/* 15 GPIO_SUS0 */				/* */
++//	GPIO_NC,																			/* 16 SEC_GPIO_SUS10 */			/* */
++//	GPIO_NC,																			/* 17 GPIO_SUS3 */				/*  */
++//	GPI(trig_edge_low, L1, P_1K_H, non_maskable, NA, UNMASK_WAKE, NA),					/* 18 GPIO_SUS7 */				/* GPIO_SUS7 */
++//	Native_M6,																			/* 19 GPIO_SUS1 */				/* GPIO_SUS1 */						//NOTE: configured as PCI_WAKE1_N, but is just a pin on the headers
++//	Native_M1,																			/* 20 GPIO_SUS5 */				/* GPIO_SUS5 */						//FIXME: What's the native mode of this pin? docs only say strapping pin for Flash Descriptor Security Override
++//	GPIO_NC,																			/* 21 SEC_GPIO_SUS11 */			/*  */
++//	Native_M6,																			/* 22 GPIO_SUS4 */				/*  */								//Note: configired as PCI_WAKE4_N //FIXME: What's on this pin?
++//	GPIO_NC,																			/* 23 SEC_GPIO_SUS8 */			/*  */
++//	Native_M6,																			/* 24 GPIO_SUS2 */				/* GPIO_SUS2 */						//NOTE: configured as PCI_WAKE2_N, but is just a pin on the headers
++//	GPIO_NC,																			/* 25 GPIO_SUS6 */				/*  */
++//	Native_M1,																			/* 26 CX_PREQ_B */				/*  */
++//	GPIO_NC,																			/* 27 SEC_GPIO_SUS9 */			/*  */
++
++	
++	/*N15 */ { .pad_conf0 = 0x3C018200, .pad_conf1 = 0x05C00001, .wake_mask = 1, .int_mask = 1, .gpe = SCI },
++	/*N16 */ GPIO_SKIP,
++	/*N17 */ { .pad_conf0 = 0x4C118200, .pad_conf1 = 0x05C00001, .wake_mask = 0, .int_mask = 1, .gpe = 0 },
++	/*N18 */ { .pad_conf0 = 0xFC918200, .pad_conf1 = 0x05C00001, .wake_mask = 0, .int_mask = 1, .gpe = SMI },
++	/*N19 */ { .pad_conf0 = 0x00160301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N20 */ { .pad_conf0 = 0x00910201, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N21 */ GPIO_SKIP,
++	/*N22 */ { .pad_conf0 = 0x00960301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N23 */ GPIO_SKIP,
++	/*N24 */ { .pad_conf0 = 0x00918102, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N25 */ { .pad_conf0 = 0xEC918201, .pad_conf1 = 0x05C00001, .wake_mask = 0, .int_mask = 1, .gpe = SCI },
++	/*N26 */ GPIO_SKIP,
++	/*N27 */ GPIO_SKIP,
++
++
++//
++//	/*
++//	  FED8CC00: 01 03 A1 00 00 00 C0 05-00 03 21 00 00 00 C0 05  *..........!.....*
++//	  FED8CC10: 01 03 01 00 60 00 C0 05-00 03 00 00 20 00 C0 05  *....`....... ...*
++//	  FED8CC20: 01 03 A1 00 00 00 C0 05-01 03 A1 00 00 00 C0 05  *................*
++//	  FED8CC30: 00 03 01 00 00 00 C0 05-01 03 A1 00 00 00 C0 05  *................*
++//	  FED8CC40: 01 03 01 00 40 00 C0 05-00 03 01 00 00 00 C0 05  *....@...........*
++//	  FED8CC50: 00 03 01 00 00 00 C0 05-01 03 A1 00 00 00 C0 05  *................*
++//	*/
++//	Native_M1,																			/* 30 TRST_B */					/*  */
++//	Native_M1,																			/* 31 TCK */					/*  */
++//	Native_M1,																			/* 32 PROCHOT_B */				/* PROCHOT_B */
++//	GPIO_SKIP,																			/* 33 SVID0_DATA */				/*  */
++//	Native_M1,																			/* 34 TMS */					/*  */
++//	GPIO_NC,																			/* 35 CX_PRDY_B_2 */			/*  */
++//	Native_M1,																			/* 36 TDO_2 */					/*  */
++//	Native_M1,																			/* 37 CX_PRDY_B */				/*  */
++//	GPIO_SKIP,																			/* 38 SVID0_ALERT_B */			/*  */
++//	Native_M1,																			/* 39 TDO */					/*  */
++//	GPIO_SKIP,																			/* 40 SVID0_CLK */				/*  */
++//	Native_M1,																			/* 41 TDI */					/*  */
++
++	/*N30 */ { .pad_conf0 = 0x00A10301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N31 */ { .pad_conf0 = 0x00210300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N32 */ { .pad_conf0 = 0x00010301, .pad_conf1 = 0x05C00060, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	GPIO_SKIP,
++	/*N34 */ { .pad_conf0 = 0x00A10301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N35 */ { .pad_conf0 = 0x00A10301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N36 */ { .pad_conf0 = 0x00010300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N37 */ { .pad_conf0 = 0x00A10301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	GPIO_SKIP,
++	/*N39 */ { .pad_conf0 = 0x00A10301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	GPIO_SKIP,
++	/*N41 */ { .pad_conf0 = 0x00A10301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++
++
++//
++//	/*
++//	  FED8D000: 00 80 11 00 00 00 C0 05-00 80 11 00 00 00 C0 05  *................*
++//	  FED8D010: 00 80 11 00 00 00 C0 05-00 80 11 00 00 00 C0 05  *................*
++//	  FED8D020: 00 80 11 00 00 00 C0 05-00 80 11 00 00 00 C0 05  *................*
++//	  FED8D030: 00 80 11 00 00 00 C0 05-00 80 11 00 00 00 C0 05  *................*
++//	  FED8D040: 02 81 11 00 00 00 C0 05-00 80 11 00 00 00 C0 05  *................*
++//	  FED8D050: 00 80 11 00 00 00 C0 05-00 80 11 00 00 00 C0 05  *................*
++//	*/
++//	GPIO_NC,																			/* 45 GP_CAMERASB05 */			/*  */
++//	GPIO_NC,																			/* 46 GP_CAMERASB02 */			/*  */
++//	GPIO_NC,																			/* 47 GP_CAMERASB08 */			/*  */
++//	GPIO_NC,																			/* 48 GP_CAMERASB00 */			/*  */
++//	GPIO_NC,																			/* 49 GP_CAMERASBO6 */			/*  */
++//	GPIO_NC,																			/* 50 GP_CAMERASB10 */			/*  */
++//	GPIO_NC,																			/* 51 GP_CAMERASB03 */			/*  */
++//	GPIO_NC,																			/* 52 GP_CAMERASB09 */			/*  */
++//	GPIO_NC,																			/* 53 GP_CAMERASB01 */			/*  */
++//	GPIO_NC,																			/* 54 GP_CAMERASB07 */			/*  */
++//	GPIO_NC,																			/* 55 GP_CAMERASB11 */			/*  */
++//	GPIO_NC,																			/* 56 GP_CAMERASB04 */			/*  */
++
++	/*N45 */ { .pad_conf0 = 0x00118000, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N46 */ { .pad_conf0 = 0x00118000, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N47 */ { .pad_conf0 = 0x00118000, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N48 */ { .pad_conf0 = 0x00118000, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N49 */ { .pad_conf0 = 0x00118000, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N50 */ { .pad_conf0 = 0x00118000, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N51 */ { .pad_conf0 = 0x00118000, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N52 */ { .pad_conf0 = 0x00118000, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N53 */ { .pad_conf0 = 0x00118000, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N54 */ { .pad_conf0 = 0x00118000, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N55 */ { .pad_conf0 = 0x00118000, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N56 */ { .pad_conf0 = 0x00118000, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++
++
++//
++//	/*
++//	  FED8D400: 00 03 01 00 00 00 C0 05-00 03 11 03 20 00 C0 05  *............ ...*
++//	  FED8D410: 01 03 91 00 00 00 C0 04-00 03 01 00 00 00 C0 05  *................*
++//	  FED8D420: 00 03 11 03 20 00 C0 05-00 03 01 00 00 00 C0 05  *.... ...........*
++//	  FED8D430: 01 03 92 00 00 00 C0 05-01 03 91 00 00 00 C0 04  *................*
++//	  FED8D440: 01 03 11 03 20 00 C0 05-00 03 01 00 00 00 C0 05  *.... ...........*
++//	  FED8D450: 00 03 01 00 00 00 C0 05-01 03 92 00 00 00 C0 05  *................*
++//	  FED8D460: 00 03 01 00 00 00 C0 05-FF FF FF FF FF FF FF FF  *................*
++//	*/
++//	GPIO_NC,																			/* 60 PANEL0_BKLTEN */			/*  */
++//	GPIO_NC,																			/* 61 HV_DDI0_HPD */			/*  */
++//	Native_M1,																			/* 62 HV_DDI2_DDC_SDA */		/* DDI2_SDA_1P8 */
++//	Native_M1,																			/* 63 PANEL1_BKLTCTL */			/* PANEL1_BKLTCTL */
++//	NATIVE_TX_RX_EN,																	/* 64 HV_DDI1_HPD */			/* DDI1_HPD */
++//	GPIO_NC,																			/* 65 PANEL0_BKLTCTL */			/*  */
++//	Native_M1,																			/* 66 HV_DDI0_DDC_SDA */		/* DDI0_1_SDA_1P8 */
++//	Native_M1,																			/* 67 HV_DDI2_DDC_SCL */		/* DDI2_SCL_1P8 */
++//	NATIVE_TX_RX_EN,																	/* 68 HV_DDI2_HPD */			/* DDI2_HPD */
++//	Native_M1,																			/* 69 PANEL1_VDDEN */			/* PANEL1_VDDEN */
++//	Native_M1,																			/* 70 PANEL1_BKLTEN */			/* PANEL1_BKLTEN */
++//	GPIO_NC,																			/* 71 HV_DDI0_DDC_SCL */		/* DDI0_1_SCL_1P8 */
++//	GPIO_NC,																			/* 72 PANEL0_VDDEN */			/*  */
++
++	/*N60 */ { .pad_conf0 = 0x00010300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N61 */ { .pad_conf0 = 0x00110300, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N62 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x04C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N63 */ { .pad_conf0 = 0x00010300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N64 */ { .pad_conf0 = 0x00110301, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N65 */ { .pad_conf0 = 0x00010300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N66 */ { .pad_conf0 = 0x00920301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N67 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x04C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N68 */ { .pad_conf0 = 0x00110301, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N69 */ { .pad_conf0 = 0x00010300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N70 */ { .pad_conf0 = 0x00010300, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*N71 */ { .pad_conf0 = 0x00920301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++
++
++	GPIO_END
++};
++
++
++/* East Community */
++static const struct soc_gpio_map  gpe_gpio_map[] = {
++	// /*
++	//   FED94400: 01 03 91 00 00 00 C0 05-01 03 91 00 00 00 C0 05  *................*
++	//   FED94410: 01 03 91 00 00 00 C0 05-01 03 91 00 00 00 C0 05  *................*
++	//   FED94420: 01 03 11 00 00 00 C0 05-01 03 91 00 00 00 C0 05  *................*
++	//   FED94430: 00 03 11 00 00 00 C0 05-00 03 91 00 00 00 C0 05  *................*
++	//   FED94440: 01 03 91 00 00 00 C0 05-01 03 91 00 00 00 C0 05  *................*
++	//   FED94450: 01 03 C1 00 00 00 C0 05-01 82 91 2C 41 00 C0 05  *...........,A...*
++	// */
++	// Native_M1,																			/* 00 PMU_SLP_S3_B */			/* PMU_SLP_S3_N */
++	// Native_M1,																			/* 01 PMU_BATLOW_B */			/* PMU_BATLOW_B */
++	// Native_M1,																			/* 02 SUS_STAT_B */				/* SUS_STAT_N */
++	// Native_M1,																			/* 03 PMU_SLP_S0IX_B */			/* SLP_S0IX_N */
++	// Native_M1,																			/* 04 PMU_AC_PRESENT */			/* PMU_AC_PRESENT */
++	// Native_M1,																			/* 05 PMU_PLTRST_B */			/* PMU_PLTRST_B */
++	// Native_M1,																			/* 06 PMU_SUSCLK */				/* PMU_SUSCLK_1P8 */
++	// GPIO_NC,																			/* 07 PMU_SLP_LAN_B */			/*  */
++	// Native_M1,																			/* 08 PMU_PWRBTN_B */			/* PMU_PWRBTN_N */
++	// Native_M1,																			/* 09 PMU_SLP_S4_B */			/* PMU_SLP_S4_N */
++	// NATIVE_FUNC(M1, P_1K_H, NA),														/* 10 PMU_WAKE_B */				/* PMU_WAKE_N */
++	// GPIO_NC,																			/* 11 PMU_WAKE_LAN_B */			/* PMU_WAKE_LAN_N */				/* FIXME: Does this connect to onboard RTL8111? */
++	
++	/*E00 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*E01 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*E02 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*E03 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*E04 */ { .pad_conf0 = 0x00110301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*E05 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*E06 */ { .pad_conf0 = 0x00110301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*E07 */ GPIO_SKIP,
++	/*E08 */ { .pad_conf0 = 0X00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*E09 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*E10 */ { .pad_conf0 = 0X00C10301, .pad_conf1 = 0x05C00000, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*E11 */ { .pad_conf0 = 0X2C918201, .pad_conf1 = 0X05C00041, .wake_mask = 1, .int_mask = 1, .gpe = 0 },
++	
++
++	// /*
++	//   FED94800: 01 03 A1 00 20 00 C0 05-02 81 11 00 20 00 C0 05  *.... ....... ...*
++	//   FED94810: 01 03 91 00 20 00 C0 05-01 03 A1 00 20 00 C0 05  *.... ....... ...*
++	//   FED94820: 00 81 11 00 20 00 C0 05-01 03 A1 00 20 00 C0 05  *.... ....... ...*
++	//   FED94830: 01 03 A1 00 20 00 C0 05-01 82 91 08 44 00 C0 05  *.... .......D...*
++	//   FED94840: 01 03 91 00 20 00 C0 05-01 03 A1 00 20 00 C0 05  *.... ....... ...*
++	//   FED94850: 00 03 11 00 20 00 C0 05-01 03 91 00 20 00 C0 05  *.... ....... ...*
++	// */
++	// GPIO_NC,																			/* 15 MF_GPIO_3 */				/*  */								/* FIXME: NC? Braswell doesn't have an ISH */
++	// GPIO_NC,																			/* 16 MF_GPIO_7 */				/*  */								/* FIXME: NC? Braswell doesn't have an ISH */
++	// GPIO_NC,																			/* 17 MF_I2C1_SCL */			/*  */								/* FIXME: NC? Braswell doesn't have an ISH */
++	// GPIO_NC,																			/* 18 MF_GPIO_1 */				/*  */								/* FIXME: NC? Braswell doesn't have an ISH */
++	// GPIO_NC,																			/* 19 MF_GPIO_5 */				/*  */								/* FIXME: NC? Braswell doesn't have an ISH */
++	// GPIO_NC,																			/* 20 MF_GPIO_9 */				/*  */								/* FIXME: NC? Braswell doesn't have an ISH */
++	// GPIO_NC,																			/* 21 MF_GPIO_0 */				/*  */								/* FIXME: NC? Braswell doesn't have an ISH */
++	// GPIO_NC,																			/* 22 MF_GPIO_4 */				/*  */								/* FIXME: NC? Braswell doesn't have an ISH */
++	// GPIO_NC,																			/* 23 MF_GPIO_8 */				/*  */								/* FIXME: NC? Braswell doesn't have an ISH */
++	// GPIO_NC,																			/* 24 MF_GPIO_2 */				/*  */								/* FIXME: NC? Braswell doesn't have an ISH */
++	// GPIO_NC,																			/* 25 MF_GPIO_6 */				/*  */								/* FIXME: NC? Braswell doesn't have an ISH */
++	// GPIO_NC,																			/* 26 MF_I2C1_SDA */			/*  */								/* FIXME: NC? Braswell doesn't have an ISH */
++
++	/*E15 */ { .pad_conf0 = 0x00A10301, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*E16 */ { .pad_conf0 = 0x00118102, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*E17 */ GPIO_SKIP,
++	/*E18 */ { .pad_conf0 = 0x00A10301, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*E19 */ { .pad_conf0 = 0x00118100, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*E20 */ { .pad_conf0 = 0x00A10301, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*E21 */ { .pad_conf0 = 0x00A10301, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*E22 */ { .pad_conf0 = 0x08918201, .pad_conf1 = 0x05C00044, .wake_mask = 0, .int_mask = 1, .gpe = 0 },
++	/*E23 */ { .pad_conf0 = 0x00910301, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*E24 */ { .pad_conf0 = 0x00A10301, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*E25 */ { .pad_conf0 = 0x00110300, .pad_conf1 = 0x05C00020, .wake_mask = 0, .int_mask = 0, .gpe = 0 },
++	/*E26 */ GPIO_SKIP,
++	
++
++	GPIO_END
++};
++
++
++static struct soc_gpio_config gpio_config = {
++	/* BSW */
++	.north = gpn_gpio_map,
++	.southeast = gpse_gpio_map,
++	.southwest  = gpsw_gpio_map,
++	.east = gpe_gpio_map
++};
++
++struct soc_gpio_config *mainboard_get_gpios(void)
++{
++
++	return &gpio_config;
++}
+diff --git a/src/mainboard/solidrun/braswell_som/irqroute.c b/src/mainboard/solidrun/braswell_som/irqroute.c
+new file mode 100644
+index 0000000000..35a8fcc358
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/irqroute.c
+@@ -0,0 +1,20 @@
++/*
++ * This file is part of the coreboot project.
++ *
++ * Copyright (C) 2013 Google Inc.
++ * Copyright (C) 2015 Intel Corp.
++ * Copyright (C) 2017 Andreas Galauner <andreas@galauner.de>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; version 2 of the License.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ */
++
++#include "irqroute.h"
++
++DEFINE_IRQ_ROUTES;
+diff --git a/src/mainboard/solidrun/braswell_som/irqroute.h b/src/mainboard/solidrun/braswell_som/irqroute.h
+new file mode 100644
+index 0000000000..c80594541b
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/irqroute.h
+@@ -0,0 +1,44 @@
++/*
++ * This file is part of the coreboot project.
++ *
++ * Copyright (C) 2013 Google Inc.
++ * Copyright (C) 2015 Intel Corp.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; version 2 of the License.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ */
++
++#include <soc/irq.h>
++#include <soc/pci_devs.h>
++#include <soc/pm.h>
++
++#define PCI_DEV_PIRQ_ROUTES \
++	PCI_DEV_PIRQ_ROUTE(GFX_DEV,  A, B, C, D), \
++	PCI_DEV_PIRQ_ROUTE(SDIO_DEV, A, B, C, D), \
++	PCI_DEV_PIRQ_ROUTE(SD_DEV,   C, D, E, F), \
++	PCI_DEV_PIRQ_ROUTE(SATA_DEV, A, B, C, D), \
++	PCI_DEV_PIRQ_ROUTE(XHCI_DEV, A, B, C, D), \
++	PCI_DEV_PIRQ_ROUTE(LPE_DEV,  A, B, C, D), \
++	PCI_DEV_PIRQ_ROUTE(MMC_DEV,  D, E, F, G), \
++	PCI_DEV_PIRQ_ROUTE(SIO1_DEV, A, B, C, D), \
++	PCI_DEV_PIRQ_ROUTE(TXE_DEV,  A, B, C, D), \
++	PCI_DEV_PIRQ_ROUTE(HDA_DEV,  A, B, C, D), \
++	PCI_DEV_PIRQ_ROUTE(PCIE_DEV, A, B, C, D), \
++	PCI_DEV_PIRQ_ROUTE(SIO2_DEV, B, C, D, E), \
++	PCI_DEV_PIRQ_ROUTE(PCU_DEV,  A, B, C, D)
++
++#define PIRQ_PIC_ROUTES \
++	PIRQ_PIC(A, DISABLE), \
++	PIRQ_PIC(B, DISABLE), \
++	PIRQ_PIC(C, DISABLE), \
++	PIRQ_PIC(D, DISABLE), \
++	PIRQ_PIC(E, DISABLE), \
++	PIRQ_PIC(F, DISABLE), \
++	PIRQ_PIC(G, DISABLE), \
++	PIRQ_PIC(H, DISABLE)
+diff --git a/src/mainboard/solidrun/braswell_som/onboard.h b/src/mainboard/solidrun/braswell_som/onboard.h
+new file mode 100644
+index 0000000000..bdb674f2f5
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/onboard.h
+@@ -0,0 +1,52 @@
++/*
++ * This file is part of the coreboot project.
++ *
++ * Copyright (C) 2013 Google Inc.
++ * Copyright (C) 2015 Intel Corp.
++ * Copyright (C) 2017 Andreas Galauner <andreas@galauner.de>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; version 2 of the License.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ */
++
++#ifndef ONBOARD_H
++#define ONBOARD_H
++
++#include "irqroute.h"
++
++/*
++ * Calculation of gpio based irq.
++ * Gpio banks ordering : GPSW, GPNC, GPEC, GPSE
++ * Max direct irq (MAX_DIRECT_IRQ) is 114.
++ * Size of gpio banks are
++ * GPSW_SIZE = 98
++ * GPNC_SIZE = 73
++ * GPEC_SIZE = 27
++ * GPSE_SIZE = 86
++ */
++
++
++/* Audio: Gpio index in SW bank */
++//#define JACK_DETECT_GPIO_INDEX		95
++
++/* SCI: Gpio index in N bank */
++//#define BOARD_SCI_GPIO_INDEX		15
++
++
++/* SD CARD gpio */
++#define SDCARD_CD			81
++
++//#define AUDIO_CODEC_HID			"10EC5650"
++//#define AUDIO_CODEC_CID			"10EC5650"
++//#define AUDIO_CODEC_DDN			"RTEK Codec Controller "
++//#define AUDIO_CODEC_I2C_ADDR		0x1A
++
++#define BCRD2_PMIC_I2C_BUS      0x01
++
++#endif
+diff --git a/src/mainboard/solidrun/braswell_som/ramstage.c b/src/mainboard/solidrun/braswell_som/ramstage.c
+new file mode 100644
+index 0000000000..5b96914b61
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/ramstage.c
+@@ -0,0 +1,67 @@
++/*
++ * This file is part of the coreboot project.
++ *
++ * Copyright (C) 2014 Intel Corporation
++ * Copyright (C) 2017 Andreas Galauner <andreas@galauner.de>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; version 2 of the License.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ */
++
++#include <soc/ramstage.h>
++#include <boardid.h>
++#include "onboard.h"
++
++// We configure a few video-related pins using the FSP here, because otherwise Video Init in the FSP seems to fail
++// All other GPIOs are later configured by coreboot routines as defined in gpio.c
++
++/* N71:HV_DDI0_DDC_SCL    >>  0        2        0         00          0xFED8D458    0x00920301     0xFED8D45C    0x05C00000
++   N66:HV_DDI0_DDC_SDA    >>  0        2        0         00          0xFED8D430    0x00920301     0xFED8D434    0x05C00000
++   N61:HV_DDI0_HPD        >>  0        1        0         00          0xFED8D408    0x00110300     0xFED8D40C    0x05C00020
++   N64:HV_DDI1_HPD        >>  0        1        0         00          0xFED8D420    0x00110301     0xFED8D424    0x05C00020
++   N67:HV_DDI2_DDC_SCL    >>  0        1        0         00          0xFED8D438    0x00910301     0xFED8D43C    0x04C00000
++   N62:HV_DDI2_DDC_SDA    >>  0        1        0         00          0xFED8D410    0x00910301     0xFED8D414    0x04C00000
++   N68:HV_DDI2_HPD        >>  0        1        0         00          0xFED8D440    0x00110301     0xFED8D444    0x05C00020
++   N65:PANEL0_BKLTCTL     >>  0        1        0         00          0xFED8D428    0x00010300     0xFED8D42C    0x05C00000
++   N60:PANEL0_BKLTEN      >>  0        1        0         00          0xFED8D400    0x00010300     0xFED8D404    0x05C00000
++   N72:PANEL0_VDDEN       >>  0        1        0         00          0xFED8D460    0x00010300     0xFED8D464    0x05C00000
++   N63:PANEL1_BKLTCTL     >>  0        1        0         00          0xFED8D418    0x00010300     0xFED8D41C    0x05C00000
++   N70:PANEL1_BKLTEN      >>  0        1        0         00          0xFED8D450    0x00010300     0xFED8D454    0x05C00000
++   N69:PANEL1_VDDEN       >>  0        1        0         00          0xFED8D448    0x00010300     0xFED8D44C    0x05C00000*/
++
++#define NORTH 0x01
++
++static BL_GPIO_PAD_INIT video_gpio_init_table[] = {
++    { .Name = NULL /*L"N71:HV_DDI0_DDC_SCL"*/,   .Confg0 = 0x00920301, .Confg0Changes = 0xFFFFFFFF, .Confg1 = 0x05C00000, .Confg1Changes = 0xFFFFFFFF, .Community = NORTH, .MmioAddr = 0x5458, .Misc = 0 },
++    { .Name = NULL /*L"N66:HV_DDI0_DDC_SDA"*/,   .Confg0 = 0x00920301, .Confg0Changes = 0xFFFFFFFF, .Confg1 = 0x05C00000, .Confg1Changes = 0xFFFFFFFF, .Community = NORTH, .MmioAddr = 0x5430, .Misc = 0 },
++    { .Name = NULL /*L"N61:HV_DDI0_HPD"*/,       .Confg0 = 0x00110300, .Confg0Changes = 0xFFFFFFFF, .Confg1 = 0x05C00020, .Confg1Changes = 0xFFFFFFFF, .Community = NORTH, .MmioAddr = 0x5408, .Misc = 0 },
++    { .Name = NULL /*L"N64:HV_DDI1_HPD"*/,       .Confg0 = 0x00110301, .Confg0Changes = 0xFFFFFFFF, .Confg1 = 0x05C00020, .Confg1Changes = 0xFFFFFFFF, .Community = NORTH, .MmioAddr = 0x5420, .Misc = 0 },
++    { .Name = NULL /*L"N67:HV_DDI2_DDC_SCL"*/,   .Confg0 = 0x00910301, .Confg0Changes = 0xFFFFFFFF, .Confg1 = 0x04C00000, .Confg1Changes = 0xFFFFFFFF, .Community = NORTH, .MmioAddr = 0x5438, .Misc = 0 },
++    { .Name = NULL /*L"N62:HV_DDI2_DDC_SDA"*/,   .Confg0 = 0x00910301, .Confg0Changes = 0xFFFFFFFF, .Confg1 = 0x04C00000, .Confg1Changes = 0xFFFFFFFF, .Community = NORTH, .MmioAddr = 0x5410, .Misc = 0 },
++    { .Name = NULL /*L"N68:HV_DDI2_HPD"*/,       .Confg0 = 0x00110301, .Confg0Changes = 0xFFFFFFFF, .Confg1 = 0x05C00020, .Confg1Changes = 0xFFFFFFFF, .Community = NORTH, .MmioAddr = 0x5440, .Misc = 0 },
++    { .Name = NULL /*L"N65:PANEL0_BKLTCTL"*/,    .Confg0 = 0x00010300, .Confg0Changes = 0xFFFFFFFF, .Confg1 = 0x05C00000, .Confg1Changes = 0xFFFFFFFF, .Community = NORTH, .MmioAddr = 0x5428, .Misc = 0 },
++    { .Name = NULL /*L"N60:PANEL0_BKLTEN"*/,     .Confg0 = 0x00010300, .Confg0Changes = 0xFFFFFFFF, .Confg1 = 0x05C00000, .Confg1Changes = 0xFFFFFFFF, .Community = NORTH, .MmioAddr = 0x5400, .Misc = 0 },
++    { .Name = NULL /*L"N72:PANEL0_VDDEN"*/,      .Confg0 = 0x00010300, .Confg0Changes = 0xFFFFFFFF, .Confg1 = 0x05C00000, .Confg1Changes = 0xFFFFFFFF, .Community = NORTH, .MmioAddr = 0x5460, .Misc = 0 },
++    { .Name = NULL /*L"N63:PANEL1_BKLTCTL"*/,    .Confg0 = 0x00010300, .Confg0Changes = 0xFFFFFFFF, .Confg1 = 0x05C00000, .Confg1Changes = 0xFFFFFFFF, .Community = NORTH, .MmioAddr = 0x5418, .Misc = 0 },
++    { .Name = NULL /*L"N70:PANEL1_BKLTEN"*/,     .Confg0 = 0x00010300, .Confg0Changes = 0xFFFFFFFF, .Confg1 = 0x05C00000, .Confg1Changes = 0xFFFFFFFF, .Community = NORTH, .MmioAddr = 0x5450, .Misc = 0 },
++    { .Name = NULL /*L"N69:PANEL1_VDDEN"*/,      .Confg0 = 0x00010300, .Confg0Changes = 0xFFFFFFFF, .Confg1 = 0x05C00000, .Confg1Changes = 0xFFFFFFFF, .Community = NORTH, .MmioAddr = 0x5448, .Misc = 0 },
++    { .Name = NULL/*L""*/,                       .Confg0 = 0xFFFFFFFF, .Confg0Changes = 0xFFFFFFFF, .Confg1 = 0xFFFFFFFF, .Confg1Changes = 0xFFFFFFFF, .Community = 0xFFFFFFFF, .MmioAddr = 0xFFFFFFFF, .Misc = 0xFFFFFFFF },
++};
++
++void mainboard_silicon_init_params(SILICON_INIT_UPD *params)
++{
++	params->ChvSvidConfig = SVID_PMIC_CONFIG;
++	params->PMIC_I2CBus = BCRD2_PMIC_I2C_BUS;
++
++    //enable turbo mode
++    params->PcdTurboMode = 1;
++
++    //params->GpioFamilyInitTablePtr = ;
++    params->GpioPadInitTablePtr = video_gpio_init_table;
++}
+diff --git a/src/mainboard/solidrun/braswell_som/romstage.c b/src/mainboard/solidrun/braswell_som/romstage.c
+new file mode 100644
+index 0000000000..5b7e6d24ca
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/romstage.c
+@@ -0,0 +1,43 @@
++/*
++ * This file is part of the coreboot project.
++ *
++ * Copyright (C) 2013 Google Inc.
++ * Copyright (C) 2015 Intel Corp.
++ * Copyright (C) 2017 Andreas Galauner <andreas@galauner.de>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; version 2 of the License.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ */
++
++#include <cbfs.h>
++#include <console/console.h>
++#include <lib.h>
++#include <soc/gpio.h>
++#include <soc/pci_devs.h>
++#include <soc/romstage.h>
++#include <string.h>
++
++void mainboard_romstage_entry(struct romstage_params *rp)
++{
++    struct pei_data *ps = rp->pei_data;
++
++    mainboard_fill_spd_data(ps);
++
++    /* Call back into chipset code with platform values updated. */
++    romstage_common(rp);
++}
++
++void mainboard_memory_init_params(struct romstage_params *params,
++	MEMORY_INIT_UPD *memory_params)
++{
++	/* Update SPD data */
++    memory_params->PcdMemorySpdPtr = (u32)params->pei_data->spd_data_ch0;
++    memory_params->PcdMemChannel0Config = params->pei_data->spd_ch0_config;
++    memory_params->PcdMemChannel1Config = params->pei_data->spd_ch1_config;
++}
+diff --git a/src/mainboard/solidrun/braswell_som/smihandler.c b/src/mainboard/solidrun/braswell_som/smihandler.c
+new file mode 100644
+index 0000000000..d2cea202cd
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/smihandler.c
+@@ -0,0 +1,92 @@
++/*
++ * This file is part of the coreboot project.
++ *
++ * Copyright (C) 2008-2009 coresystems GmbH
++ * Copyright (C) 2015 Intel Corp.
++ * Copyright (C) 2017 Andreas Galauner <andreas@galauner.de>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; version 2 of the License.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ */
++
++#include <arch/acpi.h>
++#include <arch/io.h>
++#include <console/console.h>
++#include <cpu/x86/smm.h>
++
++#include <soc/nvs.h>
++#include <soc/pm.h>
++#include <soc/gpio.h>
++
++#include "onboard.h"
++
++/* The wake gpio is SUS_GPIO[0]. */
++#define WAKE_GPIO_EN SUS_GPIO_EN0
++
++int mainboard_io_trap_handler(int smif)
++{
++	switch (smif) {
++	case 0x99:
++		printk(BIOS_DEBUG, "Sample\n");
++		smm_get_gnvs()->smif = 0;
++		break;
++	default:
++		return 0;
++	}
++
++	/*
++	 * On success, the IO Trap Handler returns 0
++	 * On failure, the IO Trap Handler returns a value != 0
++	 *
++	 * For now, we force the return value to 0 and log all traps to
++	 * see what's going on.
++	 */
++	//gnvs->smif = 0;
++	return 1;
++}
++
++/*
++ * The entire 32-bit ALT_GPIO_SMI register is passed as a parameter. Note, that
++ * this includes the enable bits in the lower 16 bits.
++ */
++void mainboard_smi_gpi(uint32_t alt_gpio_smi)
++{
++#if IS_ENABLED(CONFIG_EC_GOOGLE_CHROMEEC)
++	if (alt_gpio_smi & (1 << EC_SMI_GPI)) {
++		/* Process all pending events */
++		while (mainboard_smi_ec() != 0)
++			;
++	}
++#endif
++}
++
++void mainboard_smi_sleep(uint8_t slp_typ)
++{
++	/* Disable USB charging if required */
++	switch (slp_typ) {
++	case ACPI_S3:
++		/* Enable wake pin in GPE block. */
++		enable_gpe(WAKE_GPIO_EN);
++		break;
++	case ACPI_S5:
++		break;
++	}
++
++}
++
++int mainboard_smi_apmc(uint8_t apmc)
++{
++	switch (apmc) {
++	case APM_CNT_ACPI_ENABLE:
++		break;
++	case APM_CNT_ACPI_DISABLE:
++		break;
++	}
++	return 0;
++}
+diff --git a/src/mainboard/solidrun/braswell_som/spd/2Gb.spd.hex b/src/mainboard/solidrun/braswell_som/spd/2Gb.spd.hex
+new file mode 100644
+index 0000000000..0df94d7292
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/spd/2Gb.spd.hex
+@@ -0,0 +1,16 @@
++00 00 0B 03 03 11 02 02
++03 00 01 08 0A 00 FE 00
++69 78 69 3C 69 11 18 81
++00 05 3C 3C 01 40 00 01
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 80 AD 01
++00 00 00 00 00 00
+diff --git a/src/mainboard/solidrun/braswell_som/spd/4Gb.spd.hex b/src/mainboard/solidrun/braswell_som/spd/4Gb.spd.hex
+new file mode 100644
+index 0000000000..98c5d2cfb2
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/spd/4Gb.spd.hex
+@@ -0,0 +1,16 @@
++00 00 0B 03 04 19 02 02
++03 00 01 08 0A 00 FE 00
++69 78 69 3C 69 11 18 81
++20 08 3C 3C 01 40 00 01
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 80 AD 01
++00 00 00 00 00 00
+\ No newline at end of file
+diff --git a/src/mainboard/solidrun/braswell_som/spd/8Gb.spd.hex b/src/mainboard/solidrun/braswell_som/spd/8Gb.spd.hex
+new file mode 100644
+index 0000000000..7dba013b83
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/spd/8Gb.spd.hex
+@@ -0,0 +1,16 @@
++00 00 0B 03 05 21 02 02
++03 00 01 08 0A 00 FE 00
++69 78 69 3C 69 11 18 81
++c0 08 3C 3C 01 40 00 01
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 00 00 00
++00 00 00 00 00 80 AD 01
++00 00 00 00 00 00
+diff --git a/src/mainboard/solidrun/braswell_som/spd/Makefile.inc b/src/mainboard/solidrun/braswell_som/spd/Makefile.inc
+new file mode 100644
+index 0000000000..fb080f03d5
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/spd/Makefile.inc
+@@ -0,0 +1,37 @@
++##
++## This file is part of the coreboot project.
++##
++## Copyright (C) 2013 Google Inc.
++## Copyright (C) 2015 Intel Corp.
++##
++## This program is free software; you can redistribute it and/or modify
++## it under the terms of the GNU General Public License as published by
++## the Free Software Foundation; version 2 of the License.
++##
++## This program is distributed in the hope that it will be useful,
++## but WITHOUT ANY WARRANTY; without even the implied warranty of
++## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++## GNU General Public License for more details.
++##
++
++romstage-y += spd.c
++
++SPD_BIN = $(obj)/spd.bin
++
++SPD_SOURCES =  2Gb
++SPD_SOURCES += 4Gb
++SPD_SOURCES += 8Gb
++
++SPD_DEPS := $(foreach f, $(SPD_SOURCES), src/mainboard/$(MAINBOARDDIR)/spd/$(f).spd.hex)
++
++# Include spd ROM data
++$(SPD_BIN): $(SPD_DEPS)
++	for f in $+; \
++	  do for c in $$(cat $$f | grep -v ^#); \
++	    do printf $$(printf '\%o' 0x$$c); \
++	  done; \
++	done > $@
++
++cbfs-files-y += spd.bin
++spd.bin-file := $(SPD_BIN)
++spd.bin-type := spd
+diff --git a/src/mainboard/solidrun/braswell_som/spd/spd.c b/src/mainboard/solidrun/braswell_som/spd/spd.c
+new file mode 100644
+index 0000000000..ee26ea2971
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/spd/spd.c
+@@ -0,0 +1,198 @@
++/*
++ * This file is part of the coreboot project.
++ *
++ * Copyright (C) 2013 Google Inc.
++ * Copyright (C) 2015 Intel Corp.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; version 2 of the License.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ */
++
++#include <cbfs.h>
++#include <cbmem.h>
++#include <console/console.h>
++#include <lib.h>
++#include <memory_info.h>
++#include <smbios.h>
++#include <spd.h>
++#include <soc/gpio.h>
++#include <soc/romstage.h>
++#include <string.h>
++
++#define SPD_SIZE 126
++
++#define GPIO_DFX6_PAD_CFG0      0x4400
++#define GPIO_DFX7_PAD_CFG0      0x4410
++#define GPIO_DFX8_PAD_CFG0      0x4430
++
++static const uint32_t dual_channel_config = (1 << 0) | (1 << 1);
++
++static void configure_ramid_gpios(void)
++{
++    write32((void *)(COMMUNITY_GPNORTH_BASE + GPIO_DFX6_PAD_CFG0),
++        (PAD_PULL_UP_20K | PAD_GPIO_ENABLE | PAD_CONFIG0_GPI_DEFAULT));
++    write32((void *)(COMMUNITY_GPNORTH_BASE + GPIO_DFX7_PAD_CFG0),
++        (PAD_PULL_UP_20K | PAD_GPIO_ENABLE | PAD_CONFIG0_GPI_DEFAULT));
++    write32((void *)(COMMUNITY_GPNORTH_BASE + GPIO_DFX8_PAD_CFG0),
++        (PAD_PULL_UP_20K | PAD_GPIO_ENABLE | PAD_CONFIG0_GPI_DEFAULT));
++}
++
++static void *get_spd_pointer(char *spd_file_content, int total_spds, int *dual)
++{
++    int ram_id = 0;
++    ram_id |= get_gpio(COMMUNITY_GPNORTH_BASE, GPIO_DFX6_PAD_CFG0) << 0;
++    ram_id |= get_gpio(COMMUNITY_GPNORTH_BASE, GPIO_DFX7_PAD_CFG0) << 1;
++    ram_id |= get_gpio(COMMUNITY_GPNORTH_BASE, GPIO_DFX8_PAD_CFG0) << 2;
++
++    printk(BIOS_DEBUG, "ram_id=%d, total_spds: %d\n", ram_id, total_spds);
++    //if (ram_id >= total_spds)
++    //    return NULL;
++
++    /* Determine if this is a single or dual channel memory system */
++    if (1)
++        *dual = 1;
++
++    /* Display the RAM type */
++    //switch (ram_id) {
++    //case 0:
++    //case 2:
++    //    printk(BIOS_DEBUG, "2GiB Samsung K4B4G1646Q-HYK0 1600MHz\n");
++    //    break;
++    //case 1:
++    //case 3:
++    //    printk(BIOS_DEBUG, "2GiB Hynix  H5TC4G63CFR-PBA 1600MHz\n");
++    //    break;
++    //}
++
++    /* Return the serial product data for the RAM */
++    //FIXME: hardcoded to 4Gb dual channel for now
++    return &spd_file_content[SPD_SIZE * /*ram_id*/ 1];
++}
++
++/* Copy SPD data for on-board memory */
++void mainboard_fill_spd_data(struct pei_data *ps)
++{
++    char *spd_file;
++    size_t spd_file_len;
++    void *spd_content;
++    int dual_channel = 0;
++
++    /* Find the SPD data in CBFS. */
++    spd_file = cbfs_boot_map_with_leak("spd.bin", CBFS_TYPE_SPD,
++        &spd_file_len);
++    if (!spd_file)
++        die("SPD data not found.");
++
++    if (spd_file_len < SPD_SIZE)
++        die("Missing SPD data.");
++
++    configure_ramid_gpios();
++
++    /*
++     * Both channels are always present in SPD data. Always use matched
++     * DIMMs so use the same SPD data for each DIMM.
++     */
++    spd_content = get_spd_pointer(spd_file,
++                      spd_file_len / SPD_SIZE,
++                      &dual_channel);
++    if (IS_ENABLED(CONFIG_DISPLAY_SPD_DATA) && spd_content != NULL) {
++        printk(BIOS_DEBUG, "SPD Data:\n");
++        hexdump(spd_content, SPD_SIZE);
++        printk(BIOS_DEBUG, "\n");
++    }
++
++    /*
++     * Set SPD and memory configuration:
++     * Memory type: 0=DimmInstalled,
++     *              1=SolderDownMemory,
++     *              2=DimmDisabled
++     */
++    if (spd_content != NULL) {
++        ps->spd_data_ch0 = spd_content;
++        ps->spd_ch0_config = 1;
++        printk(BIOS_DEBUG, "Channel 0 DIMM soldered down\n");
++        if (dual_channel) {
++            printk(BIOS_DEBUG, "Channel 1 DIMM soldered down\n");
++            ps->spd_data_ch1 = spd_content;
++            ps->spd_ch1_config = 1;
++        } else {
++            printk(BIOS_DEBUG, "Channel 1 DIMM not installed\n");
++            ps->spd_ch1_config = 2;
++        }
++    }
++}
++
++// static void set_dimm_info(uint32_t chips, uint8_t *spd, struct dimm_info *dimm)
++// {
++//     uint16_t clock_frequency;
++//     uint32_t log2_chips;
++
++//     /* Parse the SPD data to determine the DIMM information */
++//     dimm->ddr_type = MEMORY_TYPE_DDR3;
++//     dimm->dimm_size = (chips << (spd[4] & 0xf)) << (28 - 3 - 20);  /* MiB */
++//     clock_frequency = 1000 * spd[11] / (spd[10] * spd[12]); /* MHz */
++//     dimm->ddr_frequency = 2 * clock_frequency;  /* Double Data Rate */
++//     dimm->mod_type = spd[3] & 0xf;
++//     //FIXME: following info is currently not present in SPD data
++//     //memcpy((char *)&dimm->module_part_number[0], &spd[0x80],
++//     //    sizeof(dimm->module_part_number) - 1);
++//     //dimm->mod_id = *(uint16_t *)&spd[0x94];
++//     switch (chips) {
++//     case 1:
++//         log2_chips = 0;
++//         break;
++
++//     case 2:
++//         log2_chips = 1;
++//         break;
++
++//     case 4:
++//         log2_chips = 2;
++//         break;
++
++//     case 8:
++//         log2_chips = 3;
++//         break;
++
++//     default:
++//         log2_chips = 0;
++//     }
++//     dimm->bus_width = (uint8_t)(log2_chips + (spd[7] & 7) + 2 - 3);
++// }
++
++// void mainboard_save_dimm_info(struct romstage_params *params)
++// {
++//     struct dimm_info *dimm;
++//     struct memory_info *mem_info;
++//     uint32_t chips;
++
++//     /*
++//      * Allocate CBMEM area for DIMM information used to populate SMBIOS
++//      * table 17
++//      */
++//     mem_info = cbmem_add(CBMEM_ID_MEMINFO, sizeof(*mem_info));
++//     printk(BIOS_DEBUG, "CBMEM entry for DIMM info: 0x%p\n", mem_info);
++//     if (mem_info == NULL)
++//         return;
++//     memset(mem_info, 0, sizeof(*mem_info));
++
++//     /* Describe the first channel memory */
++//     chips = 4;
++//     dimm = &mem_info->dimm[0];
++//     set_dimm_info(chips, params->pei_data->spd_data_ch0, dimm);
++//     mem_info->dimm_cnt = 1;
++
++//     /* Describe the second channel memory */
++//     if (params->pei_data->spd_ch1_config == 1) {
++//         dimm = &mem_info->dimm[1];
++//         set_dimm_info(chips, params->pei_data->spd_data_ch1, dimm);
++//         dimm->channel_num = 1;
++//         mem_info->dimm_cnt = 2;
++//     }
++// }
+diff --git a/src/mainboard/solidrun/braswell_som/w25q64.c b/src/mainboard/solidrun/braswell_som/w25q64.c
+new file mode 100644
+index 0000000000..075a0d0abe
+--- /dev/null
++++ b/src/mainboard/solidrun/braswell_som/w25q64.c
+@@ -0,0 +1,72 @@
++/*
++ * This file is part of the coreboot project.
++ *
++ * Copyright (C) 2014 Google Inc.
++ * Copyright (C) 2015 Intel Corp.
++ * Copyright (C) 2017 Andreas Galauner <andreas@galauner.de>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; version 2 of the License.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ */
++
++#include <soc/spi.h>
++#include <string.h>
++
++/*
++ * SPI lockdown configuration W25Q64FW.
++ */
++#define SPI_OPMENU_0 0x01 /* WRSR: Write Status Register */
++#define SPI_OPTYPE_0 0x01 /* Write, no address */
++
++#define SPI_OPMENU_1 0x02 /* BYPR: Byte Program */
++#define SPI_OPTYPE_1 0x03 /* Write, address required */
++
++#define SPI_OPMENU_2 0x03 /* READ: Read Data */
++#define SPI_OPTYPE_2 0x02 /* Read, address required */
++
++#define SPI_OPMENU_3 0x05 /* RDSR: Read Status Register */
++#define SPI_OPTYPE_3 0x00 /* Read, no address */
++
++#define SPI_OPMENU_4 0x20 /* SE20: Sector Erase 0x20 */
++#define SPI_OPTYPE_4 0x03 /* Write, address required */
++
++#define SPI_OPMENU_5 0x9f /* RDID: Read ID */
++#define SPI_OPTYPE_5 0x00 /* Read, no address */
++
++#define SPI_OPMENU_6 0xd8 /* BED8: Block Erase 0xd8 */
++#define SPI_OPTYPE_6 0x03 /* Write, address required */
++
++#define SPI_OPMENU_7 0x0b /* FAST: Fast Read */
++#define SPI_OPTYPE_7 0x02 /* Read, address required */
++
++#define SPI_OPPREFIX ((0x50 << 8) | 0x06) /* EWSR and WREN */
++#define SPI_OPTYPE ((SPI_OPTYPE_7 << 14) | (SPI_OPTYPE_6 << 12) | \
++		    (SPI_OPTYPE_5 << 10) | (SPI_OPTYPE_4 <<  8) | \
++		    (SPI_OPTYPE_3 <<  6) | (SPI_OPTYPE_2 <<  4) | \
++		    (SPI_OPTYPE_1 <<  2) | (SPI_OPTYPE_0 <<  0))
++#define SPI_OPMENU_UPPER ((SPI_OPMENU_7 << 24) | (SPI_OPMENU_6 << 16) | \
++			  (SPI_OPMENU_5 <<  8) | (SPI_OPMENU_4 <<  0))
++#define SPI_OPMENU_LOWER ((SPI_OPMENU_3 << 24) | (SPI_OPMENU_2 << 16) | \
++			  (SPI_OPMENU_1 <<  8) | (SPI_OPMENU_0 <<  0))
++#define SPI_VSCC (WG_64_BYTE | EO(0x20) | BES_4_KB)
++
++static const struct spi_config spi_config = {
++	.preop = SPI_OPPREFIX,
++	.optype = SPI_OPTYPE,
++	.opmenu = { SPI_OPMENU_LOWER, SPI_OPMENU_UPPER },
++	.lvscc =  SPI_VSCC,
++	.uvscc =  SPI_VSCC,
++};
++
++int mainboard_get_spi_config(struct spi_config *cfg)
++{
++	//memcpy(cfg, &spi_config, sizeof(*cfg));
++
++	return -1;
++}
